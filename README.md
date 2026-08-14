@@ -1,61 +1,115 @@
-# Dossia 🗞️🎙️
+# Dossia
 
-> **Autonomous News Intelligence, Editorial Dossiers & Podcasting 2.0 Engine**
+A news intelligence dashboard and Podcasting 2.0 aggregator. Dossia ingests curated technical feeds and community discussions, extracts full-text content into a local SQLite repository, synthesizes daily editorial dossiers using an LLM backend (Hermes), and exposes a Podcasting 2.0 RSS feed with structured chapter markers and transcripts.
 
-Dossia transforms how you consume technical, scientific, and industry news. Instead of overwhelming you with an endless RSS firehose or truncated stubs, Dossia maintains a curated knowledge reservoir, uses **Hermes AI** as an autonomous Editor-in-Chief to synthesize the highest-signal stories into rich daily dossiers, and publishes an automated **Podcasting 2.0 RSS feed** for listening on the go (compatible with Fountain, Pocket Casts, and Apple Podcasts).
+## Features
 
----
+- **Editorial Synthesis**: Clusters incoming articles by topic and generates structured executive briefings with source citations.
+- **Podcasting 2.0 Distribution**: Generates an RSS 2.0 feed (`/podcast.xml`) containing `<podcast:chapters>` and `<podcast:transcript>` metadata compatible with podcast clients such as Fountain, Pocket Casts, and AntennaPod.
+- **Full-Text Ingestion**: HTML sanitization and readability extraction that strips navigation, advertisements, and trackers into clean Markdown.
+- **In-App Reader**: Slide-over reader view with full-text display, summary callouts, and contextual question answering.
+- **Search and Retrieval**: SQLite FTS5 full-text search indexing across all ingested article bodies, titles, and tags.
 
-## ✨ Core Pillars
-
-- **📰 The Daily Intelligence Dossier**: Editorial executive briefings that synthesize stories across multiple sources rather than dumping disjointed links.
-- **🎧 Podcasting 2.0 RSS Publishing**: Automatically generates spoken morning briefings with synchronized `<podcast:chapters>` and `<podcast:transcript>` tags for apps like Fountain.
-- **📖 Zero-Distraction In-App Reader**: Auto-extracts full-text articles with zero ads, cookie banners, or paywall clutter.
-- **💬 Hermes In-Margin Q&A**: Highlight any paragraph in a report to ask Hermes questions, request technical deep dives, or verify claims.
-- **📚 Curated Reservoir Explorer**: Search across thousands of ingested full-text technical articles and papers with low-latency search.
-
----
-
-## 🏛️ System Architecture
+## Architecture
 
 ```
-[ Curated Knowledge Reservoir (Database) ]
-   ├── High-signal engineering blogs, Hacker News top links, arXiv, releases
-   └── Background readability engine (extracts clean full-text markdown)
-                   │
-                   ▼
-[ Hermes Editorial Engine ]
-   ├── Clusters stories & writes the "Daily Intelligence Dossier" (Rich Report)
-   └── Drafts a lively conversational podcast script with chapter timestamps
-                   │
-                   ▼
-[ Voice Synthesizer & Podcast 2.0 Publisher ]
-   ├── Synthesizes audio MP3 (via Kokoro TTS / Piper / OpenAI TTS)
-   ├── Emits standard `/podcast.xml` (with <podcast:chapters> & <podcast:transcript>)
-   └── Subscribable directly in Fountain, Pocket Casts, or Apple Podcasts
-                   │
-                   ▼
-[ Modern Editorial Web Dashboard ]
-   ├── 📰 The Editorial Dossier (High-craft typography, source pills, executive summaries)
-   ├── 🎧 In-Dashboard Audio Player (Synchronized transcript, speed controls, chapter jumps)
-   ├── 📖 In-App Full-Text Reader (Clean, distraction-free longform reading)
-   ├── 💬 Hermes Margin Chat (Highlight text to ask Hermes questions)
-   └── 📱 Podcast RSS Feed Link & QR Code (One-click subscription into Fountain)
+[ Ingestion Layer ]
+  - RSS / Atom feeds (Engineering blogs, journals, community hubs)
+  - Full-text HTML sanitization and Markdown extraction
+        |
+        v
+[ Database Layer ]
+  - SQLite with WAL mode
+  - FTS5 virtual table for keyword search
+  - Tables: articles, sources, dossiers, story_clusters, podcast_episodes
+        |
+        v
+[ Editorial Engine (Hermes) ]
+  - OpenAI-compatible API endpoint
+  - Thematic clustering, executive summary generation, and podcast scripting
+        |
+        v
+[ Delivery Layer ]
+  - FastAPI web service
+  - Static editorial frontend with responsive reader drawer and audio controls
+  - Podcasting 2.0 RSS XML generator
 ```
 
----
-
-## 📁 Repository Structure
+## Project Layout
 
 ```
 dossia/
-├── backend/            # Ingestion worker, SQLite database & Hermes pipeline
-├── frontend/           # Modern editorial web dashboard
-├── podcast/            # Podcasting 2.0 XML generator & audio manager
-└── docs/               # Architecture whitepaper & API specifications
+├── backend/
+│   ├── config.py           # Application settings and environment variables
+│   ├── database.py         # SQLite schema initialization and connection helpers
+│   ├── main.py             # FastAPI entry point and router registration
+│   ├── ingest/
+│   │   ├── cleaner.py      # HTML parsing and Markdown normalization
+│   │   └── rss.py          # Feed fetcher and article storage
+│   ├── hermes/
+│   │   ├── client.py       # OpenAI-compatible API client with fallback handler
+│   │   └── synthesizer.py  # Daily dossier clustering and synthesis
+│   ├── podcast/
+│   │   ├── rss_builder.py  # Podcasting 2.0 XML generator
+│   │   ├── script_writer.py# Podcast script and chapter timestamp generator
+│   │   └── tts_engine.py   # Text-to-speech audio synthesis interface
+│   └── routes/             # REST and XML endpoint handlers
+├── static/                 # Frontend assets (HTML, CSS, JavaScript)
+├── docs/                   # Architecture notes and whitepaper
+├── requirements.txt        # Python package dependencies
+└── run.sh                  # Application launcher script
 ```
 
----
+## Getting Started
 
-## 📄 License
+### Prerequisites
+
+- Python 3.10+
+- SQLite 3 (with FTS5 support)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/soltros/dossia.git
+   cd dossia
+   ```
+
+2. Create a virtual environment and install dependencies:
+   ```bash
+   python3 -m venv .venv
+   .venv/bin/pip install -r requirements.txt
+   ```
+
+3. Run the development server:
+   ```bash
+   ./run.sh
+   ```
+
+   The dashboard will be available at `http://localhost:8000`.
+
+### Configuration
+
+Environment variables can be configured via environment or `.env` file:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `HERMES_BASE_URL` | `http://localhost:11434/v1` | Base URL of the OpenAI-compatible Hermes LLM endpoint |
+| `HERMES_API_KEY` | `""` | Optional Bearer token for LLM API authentication |
+| `HERMES_MODEL` | `hermes-3-llama-3.1-8b` | Model identifier passed to the LLM backend |
+| `TTS_API_URL` | `""` | Optional remote TTS endpoint (`/audio/speech`) |
+
+## API Endpoints
+
+- `GET /` - Web dashboard
+- `GET /podcast.xml` - Podcasting 2.0 RSS feed
+- `GET /api/dossiers/latest` - Latest synthesized editorial dossier
+- `POST /api/dossiers/generate` - Trigger new dossier synthesis
+- `GET /api/articles` - Query ingested articles with optional `q` (FTS) and `category` filters
+- `POST /api/articles/ingest` - Trigger feed polling across all registered sources
+- `GET /api/episodes` - List generated podcast episodes with chapter metadata
+- `POST /api/hermes/ask` - Contextual question answering for article text
+
+## License
+
 MIT
