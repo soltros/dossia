@@ -4,9 +4,10 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from backend.database import get_db_connection
 from backend.hermes.client import LLMClient
+from backend.ingest.translator import translate_to_english
 
 logger = logging.getLogger("dossia.synthesizer")
 
@@ -51,8 +52,13 @@ def strip_all_links_and_markdown(text: str) -> str:
     t = re.sub(r'\s+', ' ', t).strip()
     return t
 
-def extract_meaningful_sentences(text: str, max_count: int = 3) -> List[str]:
-    """Extracts coherent, informative sentences from article text."""
+def _sentence_fingerprint(s: str) -> str:
+    """Creates a normalized fingerprint for similarity matching and deduplication."""
+    clean = re.sub(r'[^a-zA-Z0-9]', '', s.lower())
+    return clean[:40]
+
+def extract_unique_sentences(text: str, seen_set: Set[str], max_count: int = 4) -> List[str]:
+    """Extracts coherent, informative, non-repeating sentences from article text."""
     clean = strip_all_links_and_markdown(text)
     if not clean:
         return []
@@ -60,11 +66,10 @@ def extract_meaningful_sentences(text: str, max_count: int = 3) -> List[str]:
     sentences = re.split(r'(?<=[.!?])\s+', clean)
     valid = []
     
-    # Filter out navigation phrases and short fragments
     nav_phrases = [
         "skip to", "cookie", "privacy policy", "terms of", "all rights reserved",
         "subscribe", "sign in", "log in", "read more", "posted on", "written by",
-        "click here", "share this", "leave a comment", "advertisement"
+        "click here", "share this", "leave a comment", "advertisement", "newsletter"
     ]
     
     for s in sentences:
@@ -73,38 +78,49 @@ def extract_meaningful_sentences(text: str, max_count: int = 3) -> List[str]:
             continue
         if any(p in s_clean.lower() for p in nav_phrases):
             continue
-        if re.match(r'^[A-Z0-9"\'“‘]', s_clean):
-            valid.append(s_clean)
+        if not re.match(r'^[A-Z0-9"\'“‘]', s_clean):
+            continue
             
-    return valid[:max_count]
+        fp = _sentence_fingerprint(s_clean)
+        if fp in seen_set:
+            continue
+            
+        seen_set.add(fp)
+        valid.append(s_clean)
+        if len(valid) >= max_count:
+            break
+            
+    return valid
 
-def generate_domain_closing(category: str, topic: str) -> str:
+def generate_domain_closing(category: str) -> str:
     """Generates a natural, domain-tailored closing analysis sentence."""
     cat = (category or "").lower()
     
     if "gaming" in cat or "game dev" in cat:
-        return f"For players, developers, and industry observers, these announcements signal shifting platform dynamics and creative strategies across the current generation."
+        return "For players, developers, and platform observers, these announcements reflect shifting ecosystem dynamics and creative release strategies across the current console and PC generation."
     elif "labor" in cat or "politics" in cat:
-        return f"These developments reflect broader organizing trends and institutional challenges facing working-class communities and labor unions nationwide."
+        return "These developments highlight ongoing rank-and-file campaigns, contract struggles, and institutional challenges shaping working-class politics and labor advocacy."
     elif "culture" in cat:
-        return f"Across modern media and entertainment, these shifting dynamics highlight ongoing debates around artistic independence, platform control, and audience engagement."
+        return "Across modern entertainment and media, these shifting dynamics underscore evolving tensions between artistic independence, studio economics, and audience reception."
     elif "food" in cat or "fermentation" in cat:
-        return f"For bakers and fermentation practitioners, understanding these precise biochemical interactions and hydration dynamics is key to achieving consistent, high-quality results."
+        return "For bakers and culinary practitioners, mastering these biochemical mechanics, dough hydration curves, and fermentation rates ensures consistent, high-yield results."
     elif "music" in cat:
-        return f"These releases highlight the creative vitality of independent music scenes operating outside mainstream commercial algorithms."
+        return "These releases spotlight the creative vitality and sonic experimentation flourishing across independent DIY music communities."
     elif "privacy" in cat or "security" in cat:
-        return f"Security practitioners and systems engineers should evaluate these threat vectors and audit relevant configurations across active infrastructure."
+        return "Security engineers and systems administrators should assess these vulnerability disclosures and audit existing access policies to mitigate potential attack surfaces."
     elif "ai" in cat or "machine learning" in cat:
-        return f"As open models and local inference toolchains evolve, these benchmarks provide valuable insights into resource allocation and model capabilities."
+        return "As open-weight models and local inference pipelines mature, these benchmarks provide essential guidance on architectural trade-offs, quantization limits, and memory efficiency."
     elif "hardware" in cat or "electronics" in cat:
-        return f"For makers and embedded hardware designers, these boards and components offer flexible options for low-power edge prototyping."
+        return "For embedded systems designers and hardware engineers, these boards and microcontrollers offer modular building blocks for rapid prototyping."
+    elif "self-hosting" in cat or "homelab" in cat:
+        return "For homelab operators and self-hosters, evaluating container isolation, network topologies, and storage resilience remains critical when deploying these services."
     else:
-        return f"These updates reflect active progress across the ecosystem, offering valuable insights for engineers and practitioners tracking upstream developments."
+        return "These updates reflect active progress across the domain, offering actionable insights for practitioners tracking upstream technical and ecosystem changes."
 
 async def generate_daily_dossier(edition_type: str = "morning", category: Optional[str] = "all") -> Dict[str, Any]:
     """
     Synthesizes the latest batch of articles into a clean, rich, human-readable Intelligence Briefing
-    with ZERO raw URLs, bracket clutter, or robotic boilerplate.
+    with ZERO raw URLs, NO repetition, and automatic English translation of foreign sources.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -148,21 +164,38 @@ async def generate_daily_dossier(edition_type: str = "morning", category: Option
             "story_clusters": []
         }
 
-    # Clean all article content
+    # Clean and automatically translate foreign articles into English
     clean_articles = []
     for a in articles:
-        clean_title = strip_all_links_and_markdown(a["title"])
-        clean_body = strip_all_links_and_markdown(a.get("clean_content") or a.get("summary") or "")
-        clean_summary = strip_all_links_and_markdown(a.get("summary") or "")
+        raw_title = a["title"] or ""
+        raw_body = a.get("clean_content") or a.get("summary") or ""
+        raw_summary = a.get("summary") or ""
+        
+        # Translate title & body if in German or other foreign language
+        trans_title, was_trans_title, lang_title = translate_to_english(raw_title)
+        trans_body, was_trans_body, lang_body = translate_to_english(raw_body, max_chars=2000)
+        
+        is_translated = was_trans_title or was_trans_body
+        orig_lang = lang_title if was_trans_title else lang_body
+
+        clean_title = strip_all_links_and_markdown(trans_title)
+        clean_body = strip_all_links_and_markdown(trans_body)
+        clean_summary = strip_all_links_and_markdown(raw_summary)
+
         clean_articles.append({
             "id": a["id"],
-            "title": clean_title or a["title"],
+            "title": clean_title or raw_title,
             "publisher": a["publisher"],
             "category": a.get("category") or selected_category,
             "clean_body": clean_body,
             "clean_summary": clean_summary,
-            "url": a["url"]
+            "url": a["url"],
+            "is_translated": is_translated,
+            "orig_lang": orig_lang
         })
+
+    # Global sentence deduplication tracker across the entire briefing
+    seen_sentences: Set[str] = set()
 
     # Group into thematic clusters of 2 to 3 articles each
     chunk_size = 3
@@ -176,49 +209,63 @@ async def generate_daily_dossier(edition_type: str = "morning", category: Option
         bucket_ids = [a["id"] for a in bucket]
         publishers = list(set(a["publisher"] for a in bucket))
         
-        # Extract real body sentences from bucket articles
-        all_sentences = []
+        # Extract unique, non-repeating sentences from the bucket
+        bucket_sentences = []
         for a in bucket:
-            sents = extract_meaningful_sentences(a["clean_body"] or a["clean_summary"], 3)
-            all_sentences.extend(sents)
+            text_source = a["clean_body"] if len(a["clean_body"]) > 100 else a["clean_summary"]
+            sents = extract_unique_sentences(text_source, seen_sentences, max_count=3)
+            bucket_sentences.extend(sents)
 
-        # Build clean narrative paragraphs
-        p1_lead = all_sentences[0] if len(all_sentences) > 0 else f"Recent reporting from {primary['publisher']} covers key developments regarding {primary['title']}."
-        p2_detail = all_sentences[1] if len(all_sentences) > 1 else (all_sentences[0] if all_sentences else "Coverage details key announcements, structural context, and direct user feedback.")
-        p2_context = all_sentences[2] if len(all_sentences) > 2 else ""
-        p3_closing = generate_domain_closing(selected_category, primary['title'])
+        # Construct 3 non-repeating paragraphs
+        if bucket_sentences:
+            p1_lead = bucket_sentences[0]
+            p2_detail = bucket_sentences[1] if len(bucket_sentences) > 1 else ""
+            p2_context = bucket_sentences[2] if len(bucket_sentences) > 2 else ""
+        else:
+            p1_lead = f"Coverage from {primary['publisher']} focuses on core developments surrounding {primary['title']}."
+            p2_detail = "Detailed reports outline the underlying context, implementation decisions, and community feedback."
+            p2_context = ""
 
-        para1 = f"Recent reporting from {', '.join(publishers)} highlights significant developments regarding {primary['title']}. {p1_lead}"
+        # Clean headline with translation tag if applicable
+        clean_t = primary['title']
+        if clean_t.startswith('[Translated'):
+            headline = clean_t
+        elif primary.get("is_translated"):
+            headline = f"[Translated from {primary['orig_lang']}] {clean_t}"
+        else:
+            headline = clean_t
+
+        para1 = f"Recent reporting from {', '.join(publishers)} highlights key developments regarding {clean_t}. {p1_lead}"
         para2 = f"{p2_detail} {p2_context}".strip()
-        para3 = p3_closing
+        para3 = generate_domain_closing(selected_category)
 
         full_narrative = f"{para1}\n\n{para2}\n\n{para3}"
 
-        # Clean, natural Key Takeaways (NO empty labels or dangling colons)
+        # Clean, unique Key Takeaways (NO repetition of paragraph 1 or 2)
         takeaways = []
         for a in bucket:
-            sents = extract_meaningful_sentences(a["clean_body"] or a["clean_summary"], 1)
-            takeaway_text = sents[0] if sents else a["title"]
-            takeaway_text = strip_all_links_and_markdown(takeaway_text)
-            takeaways.append(f"{a['publisher']}: {takeaway_text}")
-
-        # Add a specific context takeaway if additional sentences exist
-        if len(all_sentences) > 3:
-            takeaways.append(f"Key Detail: {strip_all_links_and_markdown(all_sentences[3])}")
+            # Extract a distinct takeaway sentence
+            t_sents = extract_unique_sentences(a["clean_body"] or a["clean_summary"], seen_sentences, max_count=1)
+            t_text = t_sents[0] if t_sents else a["title"]
+            t_text = strip_all_links_and_markdown(t_text)
+            
+            trans_note = f" (Translated from {a['orig_lang']})" if a.get("is_translated") else ""
+            takeaways.append(f"{a['publisher']}{trans_note}: {t_text}")
 
         # Determine signal badge
         badge = "High Signal"
-        lower_t = primary["title"].lower()
-        if any(w in lower_t for w in ["security", "vulnerability", "cve", "patch", "exploit", "breach"]):
-            badge = "Security Alert"
-        elif any(w in lower_t for w in ["benchmark", "performance", "speed", "test"]):
-            badge = "Benchmark"
-        elif any(w in lower_t for w in ["release", "launch", "announces", "debut"]):
-            badge = "Release"
-        elif any(w in lower_t for w in ["interview", "deep dive", "analysis", "review"]):
-            badge = "Analysis"
-
-        headline = strip_all_links_and_markdown(primary["title"])
+        if primary.get("is_translated"):
+            badge = f"Translated ({primary['orig_lang']})"
+        else:
+            lower_t = primary["title"].lower()
+            if any(w in lower_t for w in ["security", "vulnerability", "cve", "patch", "exploit", "breach"]):
+                badge = "Security Alert"
+            elif any(w in lower_t for w in ["benchmark", "performance", "speed", "test"]):
+                badge = "Benchmark"
+            elif any(w in lower_t for w in ["release", "launch", "announces", "debut"]):
+                badge = "Release"
+            elif any(w in lower_t for w in ["interview", "deep dive", "analysis", "review"]):
+                badge = "Analysis"
 
         clusters_raw.append({
             "headline": headline,
@@ -229,9 +276,8 @@ async def generate_daily_dossier(edition_type: str = "morning", category: Option
             "source_article_ids": bucket_ids
         })
 
-        # Add clean bullet to Executive TL;DR
-        lead_summary = all_sentences[0] if all_sentences else primary["title"]
-        exec_tldr.append(f"{primary['publisher']}: {headline} — {lead_summary}")
+        # Distinct high-level summary for Executive TL;DR
+        exec_tldr.append(f"{primary['publisher']}: {headline} — {p1_lead[:160]}")
 
     # Limit executive TLDR to top 6 points
     exec_tldr = exec_tldr[:6]
