@@ -9,16 +9,19 @@ logger = logging.getLogger("dossia.podcast.tts")
 
 class TTSEngine:
     """
-    TTS Engine supporting:
-    1. Remote Kokoro / Piper / OpenAI-compatible /v1/audio/speech endpoints on VPS
-    2. Fallback audio file generator with silence/tone generation or mock media
+    Server-side Neural TTS Engine supporting:
+    1. Built-in Neural Speech Synthesis via edge-tts (High quality, natural broadcast voices)
+    2. Remote VPS TTS server (e.g. Kokoro, Piper, OpenAI /v1/audio/speech)
     """
 
-    @staticmethod
-    async def synthesize_speech(text: str, filename: str, voice: str = "alloy") -> str:
+    DEFAULT_VOICE = os.getenv("TTS_VOICE", "en-US-GuyNeural")
+
+    @classmethod
+    async def synthesize_speech(cls, text: str, filename: str, voice: Optional[str] = None) -> str:
         output_path = MEDIA_DIR / filename
+        voice_to_use = voice or cls.DEFAULT_VOICE
         
-        # Check if remote TTS endpoint is configured in env
+        # 1. Check if remote custom TTS endpoint is configured
         tts_endpoint = os.getenv("TTS_API_URL", "")
         if tts_endpoint:
             try:
@@ -26,22 +29,31 @@ class TTSEngine:
                 payload = {
                     "model": "tts-1",
                     "input": text,
-                    "voice": voice
+                    "voice": voice_to_use
                 }
                 async with httpx.AsyncClient(timeout=90.0) as client:
                     resp = await client.post(f"{tts_endpoint.rstrip('/')}/audio/speech", json=payload, headers=headers)
                     if resp.status_code == 200:
                         with open(output_path, "wb") as f:
                             f.write(resp.content)
+                        logger.info(f"Synthesized speech via remote VPS TTS -> {output_path}")
                         return f"/audio/{filename}"
             except Exception as e:
-                logger.warning(f"Remote TTS failed ({e}), creating standard audio asset.")
+                logger.warning(f"Remote TTS failed ({e}), falling back to built-in neural TTS.")
 
-        # If no remote TTS server is reached, write an empty or small valid MP3 container so the feed is strictly valid
+        # 2. Built-in Neural TTS synthesis via edge-tts
+        try:
+            import edge_tts
+            communicate = edge_tts.Communicate(text, voice_to_use)
+            await communicate.save(str(output_path))
+            logger.info(f"Synthesized neural speech -> {output_path} ({os.path.getsize(output_path)} bytes)")
+            return f"/audio/{filename}"
+        except Exception as e:
+            logger.error(f"Built-in neural TTS synthesis error: {e}")
+
+        # 3. Fallback dummy audio container if all synthesis fails
         if not output_path.exists():
-            # Create a lightweight placeholder MP3 file so podcast players can validate the enclosure
             with open(output_path, "wb") as f:
-                # 1-second silence MP3 header bytes
                 f.write(b'\xff\xfb\x90\x44\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' * 32)
                 
         return f"/audio/{filename}"

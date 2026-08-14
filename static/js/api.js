@@ -75,5 +75,14 @@ const API = {
   async deleteSource(sourceId) {
     const res = await fetch(`/api/settings/sources/${sourceId}`, { method: 'DELETE' });
     return res.json();
+  },
+
+  async speakText(title, text) {
+    const res = await fetch('/api/tts/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, text })
+    });
+    return res.json();
   }
 };

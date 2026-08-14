@@ -70,17 +70,36 @@ class DossiaAudioPlayer {
     }
   }
 
-  playSpokenText(title, text) {
+  async playSpokenText(title, text) {
     this.audioEl.pause();
     this.stopSpeech();
-    this.isSpeechSynthesis = true;
+    this.isSpeechSynthesis = false;
     
-    this.titleEl.textContent = `🎙️ Reading: ${title}`;
-    this.chapterEl.textContent = 'Spoken Article Voice';
+    this.titleEl.textContent = `🎙️ ${title}`;
+    this.chapterEl.textContent = 'Synthesizing Neural Speech...';
+    this.playPauseBtn.textContent = '⏳';
     this.currentChapters = [];
-    this.chapterSelect.innerHTML = '<option>Full Article</option>';
+    this.chapterSelect.innerHTML = '<option>Full Audio</option>';
 
+    try {
+      // Use server-side neural voice synthesis
+      const res = await API.speakText(title, text);
+      if (res && res.audio_url) {
+        this.chapterEl.textContent = 'Neural Broadcast Voice';
+        this.audioEl.src = res.audio_url;
+        this.audioEl.playbackRate = this.currentSpeed;
+        await this.audioEl.play();
+        this.playPauseBtn.textContent = '⏸';
+        return;
+      }
+    } catch (err) {
+      console.warn('Server TTS failed, attempting browser speech:', err);
+    }
+
+    // Fallback to browser SpeechSynthesis if server TTS is unreachable
     if ('speechSynthesis' in window) {
+      this.isSpeechSynthesis = true;
+      this.chapterEl.textContent = 'Browser Speech Engine';
       this.speechUtterance = new SpeechSynthesisUtterance(text);
       this.speechUtterance.rate = this.currentSpeed;
       this.speechUtterance.onend = () => {
@@ -89,12 +108,13 @@ class DossiaAudioPlayer {
       this.speechUtterance.onerror = (e) => {
         console.warn('Browser speech synthesis error:', e);
         this.playPauseBtn.textContent = '▶';
-        this.chapterEl.textContent = 'Speech engine unavailable (speech-dispatcher needed)';
+        this.chapterEl.textContent = 'Speech engine unavailable';
       };
       window.speechSynthesis.speak(this.speechUtterance);
       this.playPauseBtn.textContent = '⏸';
     } else {
-      this.chapterEl.textContent = 'Web Speech not supported in browser';
+      this.chapterEl.textContent = 'Speech synthesis unavailable';
+      this.playPauseBtn.textContent = '▶';
     }
   }
 

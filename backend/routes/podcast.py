@@ -128,7 +128,6 @@ async def generate_episode_from_latest_dossier():
         json.dumps(script_data["chapters"]),
         script_data["full_transcript"]
     ))
-
     conn.commit()
     conn.close()
 
@@ -141,3 +140,25 @@ async def generate_episode_from_latest_dossier():
         "duration_seconds": script_data["duration_seconds"],
         "chapters": script_data["chapters"]
     }
+
+from pydantic import BaseModel
+
+class SpeakRequest(BaseModel):
+    title: Optional[str] = "Spoken Audio"
+    text: str
+    voice: Optional[str] = None
+
+@router.post("/api/tts/speak")
+async def speak_text_on_demand(payload: SpeakRequest):
+    import hashlib
+    text_hash = hashlib.sha256(payload.text.encode()).hexdigest()[:12]
+    filename = f"speak-{text_hash}.mp3"
+    
+    audio_path = await TTSEngine.synthesize_speech(payload.text, filename, payload.voice)
+    return {
+        "status": "success",
+        "audio_url": audio_path,
+        "title": payload.title
+    }
+
+
