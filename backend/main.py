@@ -54,6 +54,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import FileResponse
+
 # Register API Routers
 app.include_router(dossiers_router)
 app.include_router(articles_router)
@@ -64,9 +66,13 @@ app.include_router(settings_router)
 # Mount audio media files
 app.mount("/audio", StaticFiles(directory=str(MEDIA_DIR)), name="audio")
 
-# Mount frontend static directory
+# Mount frontend static directory for /static/* assets
 if STATIC_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @app.get("/", include_in_schema=False)
+    async def serve_index():
+        return FileResponse(STATIC_DIR / "index.html")
 
 if __name__ == "__main__":
     import uvicorn
