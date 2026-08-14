@@ -5,28 +5,34 @@ from typing import Tuple
 
 logger = logging.getLogger("dossia.translator")
 
-# Strict German function words
-GERMAN_FUNCTION_WORDS = {
-    "der", "die", "das", "und", "ist", "für", "nicht", "eine", "einen", "einem", "einer",
-    "über", "kann", "können", "machen", "leserumfrage", "sicherheit", "datenschutz",
-    "schützt", "deine", "privatsphäre", "warum", "oder", "sind", "mit", "nach", "bei",
-    "auch", "durch", "werden", "wurde", "alle", "welche", "themen", "beiträge", "besser"
+# Distinct German-only words (cannot be confused with English words like 'die' or 'mit')
+DISTINCT_GERMAN_WORDS = {
+    "leserumfrage", "datenschutz", "sicherheit", "schützt", "privatsphäre",
+    "über", "können", "wurde", "nicht", "eine", "einen", "einem", "einer",
+    "durch", "beiträge", "nachrichten", "einstellungen", "benutzer", "weiterlesen",
+    "anmelden", "registrieren", "abonnieren", "umfrage", "kommentare", "archiv"
 }
 
 def is_strictly_foreign(text: str) -> Tuple[bool, str]:
     if not text or len(text.strip()) < 10:
         return False, "en"
     
-    words = [w.lower() for w in re.findall(r'\b[a-zA-Zäöüßéèêàáíóúñç]+\b', text)]
-    if not words:
+    # If text contains standard English stopwords, verify it's not predominantly English
+    english_stopwords = {"the", "and", "is", "in", "to", "of", "for", "with", "on", "at", "from", "by", "this", "that"}
+    words_lower = [w.lower() for w in re.findall(r'\b[a-zA-Zäöüßéèêàáíóúñç]+\b', text)]
+    
+    eng_matches = sum(1 for w in words_lower if w in english_stopwords)
+    if eng_matches >= 3 and not bool(re.search(r'[äöüßÄÖÜ]', text)):
         return False, "en"
     
-    # Check German
-    german_matches = sum(1 for w in words if w in GERMAN_FUNCTION_WORDS)
+    # Check German distinct words
+    german_matches = sum(1 for w in words_lower if w in DISTINCT_GERMAN_WORDS)
     has_umlauts = bool(re.search(r'[äöüßÄÖÜ]', text))
     
-    # Require at least 2 German words or an umlaut + German word
-    if german_matches >= 2 or (has_umlauts and german_matches >= 1):
+    # Strictly require unambiguous German markers
+    if (has_umlauts and german_matches >= 1) or german_matches >= 2:
+        return True, "German"
+    elif has_umlauts and len(words_lower) < 15:
         return True, "German"
         
     return False, "en"
