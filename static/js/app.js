@@ -165,12 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     formatMarkdown(text) {
       if (!text) return '';
-      // Clean isolated brackets and markdown noise
+      // Strip all raw URLs and markdown link wrappers
       let clean = text
         .replace(/!\[.*?\]\(.*?\)/g, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/www\.\S+/gi, '')
         .replace(/\(\/[^\)]+\)/g, '')
-        .replace(/\[[A-Za-z0-9\.\-_ /]{1,25}\]/g, '')
+        .replace(/\[[A-Za-z0-9\.\-_ /]{1,30}\]/g, '')
+        .replace(/\[\s*\]/g, '')
         .replace(/^[#*+\->\s|]+/gm, '')
         .trim();
 
@@ -180,8 +183,19 @@ document.addEventListener('DOMContentLoaded', () => {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       
-      // Bold
+      // Convert **bold** to <strong>
       html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // Convert "Publisher Name: Text" at start to "<strong>Publisher Name:</strong> Text" if not already bolded
+      if (!html.startsWith('<strong>') && html.includes(':')) {
+        const colonIdx = html.indexOf(':');
+        if (colonIdx > 0 && colonIdx < 45) {
+          const prefix = html.substring(0, colonIdx);
+          const rest = html.substring(colonIdx + 1);
+          html = `<strong>${prefix}:</strong>${rest}`;
+        }
+      }
+
       // Inline code
       html = html.replace(/`([^`]+)`/g, '<code style="background: var(--bg-surface-elevated); padding: 2px 5px; border-radius: 4px; font-size: 0.88em; font-family: var(--font-mono);">$1</code>');
       
