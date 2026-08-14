@@ -210,40 +210,46 @@
       </div>
     </section>
 
-    <!-- VIEW 4: Settings & Hermes VPS -->
+    <!-- VIEW 4: Settings & Multi-LLM Provider Engine -->
     <section class="tab-view" id="settings-view">
       <div class="dossier-header">
         <div>
-          <div class="dossier-meta-edition">Configuration & Infrastructure</div>
-          <h1 class="dossier-title">Settings & Hermes Bridge</h1>
+          <div class="dossier-meta-edition">Configuration & Intelligence Backends</div>
+          <h1 class="dossier-title">Settings & LLM Providers</h1>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
         <div class="story-capsule">
-          <h3 class="serif-heading" style="font-size: 1.3rem; margin-bottom: 16px;">Hermes VPS Connection</h3>
+          <h3 class="serif-heading" style="font-size: 1.3rem; margin-bottom: 16px;">AI Intelligence Engine</h3>
           <form id="settings-form" style="display: flex; flex-direction: column; gap: 16px;">
             <div>
               <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">
-                Hermes API Base URL (OpenAI-compatible)
+                Active LLM Provider
               </label>
-              <input type="text" id="setting-hermes-url" class="qa-input" style="width: 100%;" placeholder="http://your-vps-ip:11434/v1">
+              <select id="setting-llm-provider" class="qa-input" style="width: 100%; cursor: pointer;">
+                <option value="hermes">Hermes / Local / VPS (OpenAI-compatible)</option>
+                <option value="openai">OpenAI (GPT-4o, GPT-4o-mini, o3-mini)</option>
+                <option value="anthropic">Anthropic Claude (Claude 3.7 / 3.5 Sonnet, Haiku)</option>
+                <option value="openrouter">OpenRouter (DeepSeek R1, Llama 3.3, Qwen 2.5)</option>
+                <option value="custom">Custom Endpoint (vLLM, Ollama, Aphrodite, LM Studio)</option>
+              </select>
             </div>
-            <div>
-              <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">
-                Hermes Model Identifier
-              </label>
-              <input type="text" id="setting-hermes-model" class="qa-input" style="width: 100%;" placeholder="hermes-3-llama-3.1-8b">
+
+            <!-- Provider Specific Configuration Fields -->
+            <div id="provider-fields-container" style="display: flex; flex-direction: column; gap: 14px;">
+              <!-- Dynamically populated/switched in app.js -->
             </div>
-            <div>
-              <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">
-                API Key / Auth Token (Optional)
-              </label>
-              <input type="password" id="setting-hermes-key" class="qa-input" style="width: 100%;" placeholder="Bearer token">
+
+            <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+              <button type="submit" class="btn-primary">
+                <span>💾</span> Save Settings
+              </button>
+              <button type="button" class="btn-secondary" id="test-llm-btn">
+                <span>🧪</span> Test Connection
+              </button>
             </div>
-            <button type="submit" class="btn-primary" style="align-self: flex-start;">
-              <span>💾</span> Save Connection
-            </button>
+            <div id="llm-test-status" style="font-size: 0.84rem; font-family: var(--font-mono); margin-top: 4px;"></div>
           </form>
         </div>
 

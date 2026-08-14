@@ -547,18 +547,57 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     // --------------------------------------------------------------------------
-    // View 4: Settings & Feed Sources
     // --------------------------------------------------------------------------
+    // View 4: Settings & Multi-LLM Provider Engine
+    // --------------------------------------------------------------------------
+    currentSettings: {},
+
     initSettingsView() {
+      const providerSelect = document.getElementById('setting-llm-provider');
+      providerSelect.addEventListener('change', () => {
+        this.renderProviderFields(providerSelect.value);
+      });
+
+      document.getElementById('test-llm-btn').addEventListener('click', async () => {
+        const testBtn = document.getElementById('test-llm-btn');
+        const statusBox = document.getElementById('llm-test-status');
+        const provider = providerSelect.value;
+
+        testBtn.disabled = true;
+        testBtn.innerHTML = '<span>⏳</span> Testing...';
+        statusBox.textContent = 'Probing LLM endpoint...';
+        statusBox.style.color = 'var(--text-muted)';
+
+        try {
+          // First save current form fields so test uses the latest inputs
+          await this.saveCurrentSettingsForm(false);
+
+          const res = await fetch('/api/settings/test-llm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider })
+          });
+          const result = await res.json();
+
+          if (result.status === 'connected') {
+            statusBox.innerHTML = `🟢 <strong>Connected</strong> to ${result.provider} (${result.latency_ms}ms) — Response: "${result.response}"`;
+            statusBox.style.color = 'var(--accent-primary)';
+          } else {
+            statusBox.innerHTML = `🟡 <strong>Fallback Active</strong>: ${result.message} (${result.latency_ms}ms)`;
+            statusBox.style.color = '#e6a23c';
+          }
+        } catch (e) {
+          statusBox.innerHTML = `🔴 <strong>Error</strong>: ${e.message}`;
+          statusBox.style.color = 'red';
+        } finally {
+          testBtn.disabled = false;
+          testBtn.innerHTML = '<span>🧪</span> Test Connection';
+        }
+      });
+
       document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const payload = {
-          hermes_base_url: document.getElementById('setting-hermes-url').value,
-          hermes_model: document.getElementById('setting-hermes-model').value,
-          hermes_api_key: document.getElementById('setting-hermes-key').value
-        };
-        await API.saveSettings(payload);
-        alert('Settings saved successfully!');
+        await this.saveCurrentSettingsForm(true);
       });
 
       document.getElementById('add-source-form').addEventListener('submit', async (e) => {
@@ -573,12 +612,128 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     },
 
+    renderProviderFields(provider) {
+      const container = document.getElementById('provider-fields-container');
+      const s = this.currentSettings || {};
+
+      if (provider === 'openai') {
+        container.innerHTML = `
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">OpenAI API Key</label>
+            <input type="password" id="setting-openai-key" class="qa-input" style="width: 100%;" placeholder="${s.openai_api_key_masked || 'sk-...'}">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
+            <input type="text" id="setting-openai-model" class="qa-input" style="width: 100%;" value="${s.openai_model || 'gpt-4o-mini'}" placeholder="gpt-4o, gpt-4o-mini, o3-mini">
+          </div>
+        `;
+      } else if (provider === 'anthropic') {
+        container.innerHTML = `
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Anthropic Claude API Key</label>
+            <input type="password" id="setting-anthropic-key" class="qa-input" style="width: 100%;" placeholder="${s.anthropic_api_key_masked || 'sk-ant-...'}">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
+            <input type="text" id="setting-anthropic-model" class="qa-input" style="width: 100%;" value="${s.anthropic_model || 'claude-3-5-sonnet-20241022'}" placeholder="claude-3-7-sonnet-20250219, claude-3-5-haiku-20241022">
+          </div>
+        `;
+      } else if (provider === 'openrouter') {
+        container.innerHTML = `
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">OpenRouter API Key</label>
+            <input type="password" id="setting-openrouter-key" class="qa-input" style="width: 100%;" placeholder="${s.openrouter_api_key_masked || 'sk-or-...'}">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
+            <input type="text" id="setting-openrouter-model" class="qa-input" style="width: 100%;" value="${s.openrouter_model || 'deepseek/deepseek-r1'}" placeholder="deepseek/deepseek-r1, meta-llama/llama-3.3-70b-instruct">
+          </div>
+        `;
+      } else if (provider === 'custom') {
+        container.innerHTML = `
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Custom API Base URL</label>
+            <input type="text" id="setting-custom-url" class="qa-input" style="width: 100%;" value="${s.custom_base_url || 'http://localhost:8080/v1'}" placeholder="http://localhost:8080/v1">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
+            <input type="text" id="setting-custom-model" class="qa-input" style="width: 100%;" value="${s.custom_model || 'default'}" placeholder="model name">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional)</label>
+            <input type="password" id="setting-custom-key" class="qa-input" style="width: 100%;" placeholder="${s.custom_api_key_masked || 'Bearer token'}">
+          </div>
+        `;
+      } else {
+        // Default: hermes
+        container.innerHTML = `
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Hermes / VPS API Base URL</label>
+            <input type="text" id="setting-hermes-url" class="qa-input" style="width: 100%;" value="${s.hermes_base_url || 'http://localhost:11434/v1'}" placeholder="http://your-vps-ip:11434/v1">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Hermes Model Identifier</label>
+            <input type="text" id="setting-hermes-model" class="qa-input" style="width: 100%;" value="${s.hermes_model || 'hermes-3-llama-3.1-8b'}" placeholder="hermes-3-llama-3.1-8b">
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional)</label>
+            <input type="password" id="setting-hermes-key" class="qa-input" style="width: 100%;" placeholder="${s.hermes_api_key_masked || 'Bearer token'}">
+          </div>
+        `;
+      }
+    },
+
+    async saveCurrentSettingsForm(showAlert = true) {
+      const provider = document.getElementById('setting-llm-provider').value;
+      const payload = { llm_provider: provider };
+
+      if (provider === 'openai') {
+        const key = document.getElementById('setting-openai-key')?.value;
+        const model = document.getElementById('setting-openai-model')?.value;
+        if (key) payload.openai_api_key = key;
+        if (model) payload.openai_model = model;
+      } else if (provider === 'anthropic') {
+        const key = document.getElementById('setting-anthropic-key')?.value;
+        const model = document.getElementById('setting-anthropic-model')?.value;
+        if (key) payload.anthropic_api_key = key;
+        if (model) payload.anthropic_model = model;
+      } else if (provider === 'openrouter') {
+        const key = document.getElementById('setting-openrouter-key')?.value;
+        const model = document.getElementById('setting-openrouter-model')?.value;
+        if (key) payload.openrouter_api_key = key;
+        if (model) payload.openrouter_model = model;
+      } else if (provider === 'custom') {
+        const url = document.getElementById('setting-custom-url')?.value;
+        const model = document.getElementById('setting-custom-model')?.value;
+        const key = document.getElementById('setting-custom-key')?.value;
+        if (url) payload.custom_base_url = url;
+        if (model) payload.custom_model = model;
+        if (key) payload.custom_api_key = key;
+      } else {
+        const url = document.getElementById('setting-hermes-url')?.value;
+        const model = document.getElementById('setting-hermes-model')?.value;
+        const key = document.getElementById('setting-hermes-key')?.value;
+        if (url) payload.hermes_base_url = url;
+        if (model) payload.hermes_model = model;
+        if (key) payload.hermes_api_key = key;
+      }
+
+      await API.saveSettings(payload);
+      if (showAlert) alert('Settings saved successfully!');
+      await this.loadSettings();
+    },
+
     async loadSettings() {
       try {
         const data = await API.getSettings();
-        document.getElementById('setting-hermes-url').value = data.hermes_base_url || '';
-        document.getElementById('setting-hermes-model').value = data.hermes_model || '';
-        
+        this.currentSettings = data;
+
+        const providerSelect = document.getElementById('setting-llm-provider');
+        if (data.llm_provider) {
+          providerSelect.value = data.llm_provider;
+        }
+        this.renderProviderFields(providerSelect.value);
+
         const list = document.getElementById('sources-list-container');
         list.innerHTML = '';
         (data.sources || []).forEach(src => {
@@ -598,9 +753,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
           list.appendChild(item);
-        });
       } catch (e) {
-        console.error('Settings load error:', e);
+        console.error('Failed to load settings:', e);
       }
     },
 
