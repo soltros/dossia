@@ -86,8 +86,15 @@ class DossiaAudioPlayer {
       this.speechUtterance.onend = () => {
         this.playPauseBtn.textContent = '▶';
       };
+      this.speechUtterance.onerror = (e) => {
+        console.warn('Browser speech synthesis error:', e);
+        this.playPauseBtn.textContent = '▶';
+        this.chapterEl.textContent = 'Speech engine unavailable (speech-dispatcher needed)';
+      };
       window.speechSynthesis.speak(this.speechUtterance);
       this.playPauseBtn.textContent = '⏸';
+    } else {
+      this.chapterEl.textContent = 'Web Speech not supported in browser';
     }
   }
 
