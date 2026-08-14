@@ -13,7 +13,7 @@ CURATED_LINUX_CATALOG = [
         "name": "Phoronix",
         "site_url": "https://www.phoronix.com/",
         "feed_url": "https://www.phoronix.com/rss.php",
-        "category": "Hardware & Kernel Benchmarks",
+        "category": "Linux: Hardware & Benchmarks",
         "best_for": "Hardware benchmarks, GPU/Vulkan drivers, and low-level Linux performance.",
         "why_read": "Michael Larabel tracks patch submissions, GPU/Vulkan drivers, kernel optimization work, and runs rigorous automated benchmarks on modern hardware.",
         "enabled": 1
@@ -23,7 +23,7 @@ CURATED_LINUX_CATALOG = [
         "name": "LWN.net (Linux Weekly News)",
         "site_url": "https://lwn.net/",
         "feed_url": "https://lwn.net/headlines/rss",
-        "category": "Kernel & Deep Architecture",
+        "category": "Linux: Kernel & Architecture",
         "best_for": "Deep, technical journalism on kernel architecture and developer mailing lists.",
         "why_read": "Unmatched in technical depth. Covers architectural decisions, security patches, and maintainer debates happening inside the Linux kernel and core toolchains.",
         "enabled": 1
@@ -33,7 +33,7 @@ CURATED_LINUX_CATALOG = [
         "name": "It's FOSS",
         "site_url": "https://itsfoss.com/",
         "feed_url": "https://itsfoss.com/rss/",
-        "category": "Desktop & Open Source",
+        "category": "Linux: Desktop & Open Source",
         "best_for": "General desktop Linux news, open-source project spotlights, and guides.",
         "why_read": "Covers daily news around major desktop environments, newly released open-source utilities, and straightforward distro updates.",
         "enabled": 1
@@ -43,7 +43,7 @@ CURATED_LINUX_CATALOG = [
         "name": "9to5Linux",
         "site_url": "https://9to5linux.com/",
         "feed_url": "https://9to5linux.com/feed",
-        "category": "Distro Releases & Updates",
+        "category": "Linux: Distro Releases",
         "best_for": "Fast-paced distribution releases, kernel version drops, and software updates.",
         "why_read": "Quick turnaround on new release announcements for popular distros (Fedora, Arch, Debian, Ubuntu) and desktop environments (KDE Plasma, GNOME, COSMIC).",
         "enabled": 1
@@ -53,7 +53,7 @@ CURATED_LINUX_CATALOG = [
         "name": "OMG! Ubuntu!",
         "site_url": "https://www.omgubuntu.co.uk/",
         "feed_url": "https://www.omgubuntu.co.uk/feed",
-        "category": "Desktop & GNOME",
+        "category": "Linux: Desktop & GNOME",
         "best_for": "Ubuntu ecosystem, GNOME developments, and desktop app updates.",
         "why_read": "Joey Sneddon covers cross-distro desktop topics, GTK/GNOME app updates, and Linux ecosystem news.",
         "enabled": 1
@@ -63,7 +63,7 @@ CURATED_LINUX_CATALOG = [
         "name": "GamingOnLinux",
         "site_url": "https://www.gamingonlinux.com/",
         "feed_url": "https://www.gamingonlinux.com/article_rss.php",
-        "category": "Gaming & Graphics Stack",
+        "category": "Linux: Gaming & Graphics",
         "best_for": "Proton/Wine compatibility, Steam on Linux, native game releases, and Mesa/Vulkan progress.",
         "why_read": "Liam Dawe covers the rapid pace of Linux gaming, graphics driver progress (Mesa/Vulkan), and portable PC gaming ecosystems.",
         "enabled": 1
@@ -73,7 +73,7 @@ CURATED_LINUX_CATALOG = [
         "name": "DistroWatch Weekly",
         "site_url": "https://distrowatch.com/",
         "feed_url": "https://distrowatch.com/news/dww.xml",
-        "category": "Distros & Packages",
+        "category": "Linux: Distros & Packages",
         "best_for": "Tracking all active distributions, package changes, and new project releases.",
         "why_read": "Summarizes major ecosystem announcements, release schedules, package migrations, and community reviews.",
         "enabled": 1
@@ -83,7 +83,7 @@ CURATED_LINUX_CATALOG = [
         "name": "nixCraft",
         "site_url": "https://www.cyberciti.biz/",
         "feed_url": "https://www.cyberciti.biz/feed/",
-        "category": "Sysadmin & Security",
+        "category": "Linux: Sysadmin & Security",
         "best_for": "System administrators, DevOps workflows, shell tips, and security alerts.",
         "why_read": "Vivek Gite focuses on practical sysadmin work, containerization, server security vulnerabilities, and command-line tooling.",
         "enabled": 1
@@ -93,7 +93,7 @@ CURATED_LINUX_CATALOG = [
         "name": "Linux Today",
         "site_url": "https://www.linuxtoday.com/",
         "feed_url": "https://www.linuxtoday.com/feed/",
-        "category": "FOSS News Aggregation",
+        "category": "Linux: FOSS News Aggregation",
         "best_for": "Daily curated news aggregation across the entire FOSS world.",
         "why_read": "Acts as a central feed pulling together security advisories, enterprise open-source news, tutorials, and distro release notes.",
         "enabled": 1
@@ -103,12 +103,117 @@ CURATED_LINUX_CATALOG = [
         "name": "Linux Uprising",
         "site_url": "https://www.linuxuprising.com/",
         "feed_url": "https://feeds.feedburner.com/LinuxUprising",
-        "category": "Utilities & CLI Tools",
+        "category": "Linux: Utilities & CLI",
         "best_for": "App reviews, small utility discovery, command-line tweaks, and PPA/Flatpak highlights.",
         "why_read": "Great for discovering niche open-source utilities, terminal tools, and detailed installation/configuration recipes.",
         "enabled": 1
     }
 ]
+
+CURATED_GAMING_CATALOG = [
+    {
+        "id": "rockpapershotgun",
+        "name": "Rock Paper Shotgun",
+        "site_url": "https://www.rockpapershotgun.com/",
+        "feed_url": "https://www.rockpapershotgun.com/feed",
+        "category": "Gaming: PC & Indie",
+        "best_for": "PC gaming, niche genres, simulation, strategy, and indie deep dives.",
+        "why_read": "RPS focuses strictly on the PC ecosystem with sharp, voice-driven editorial work. Spotlights weird and wonderful indie gems, complex RPGs, and patch impressions.",
+        "enabled": 1
+    },
+    {
+        "id": "eurogamer",
+        "name": "Eurogamer & Digital Foundry",
+        "site_url": "https://www.eurogamer.net/",
+        "feed_url": "https://www.eurogamer.net/feed",
+        "category": "Gaming: Tech & Journalism",
+        "best_for": "Rigorous journalism, in-depth reviews, and hardware performance breakdowns.",
+        "why_read": "Respected European outlet for balanced critique and industry news. Digital Foundry is the gold standard for frame-rate analysis and graphics engine breakdowns.",
+        "enabled": 1
+    },
+    {
+        "id": "pcgamer",
+        "name": "PC Gamer",
+        "site_url": "https://www.pcgamer.com/",
+        "feed_url": "https://www.pcgamer.com/rss/",
+        "category": "Gaming: PC & Hardware",
+        "best_for": "Mainstream PC gaming news, modding, hardware coverage, and major updates.",
+        "why_read": "A long-running staple of PC gaming with fast reporting on major studio releases, hardware guides, patch breakdowns, and community mods.",
+        "enabled": 1
+    },
+    {
+        "id": "gamedeveloper",
+        "name": "Game Developer",
+        "site_url": "https://www.gamedeveloper.com/",
+        "feed_url": "https://www.gamedeveloper.com/rss.xml",
+        "category": "Gaming: Design & Engineering",
+        "best_for": "Behind-the-scenes engineering, game design theory, and industry postmortems.",
+        "why_read": "Written for and by creators, focusing on game engines, narrative design, rendering tech, AI mechanics, and developer realities.",
+        "enabled": 1
+    },
+    {
+        "id": "gamesindustry",
+        "name": "GamesIndustry.biz",
+        "site_url": "https://www.gamesindustry.biz/",
+        "feed_url": "https://www.gamesindustry.biz/feed",
+        "category": "Gaming: Industry & Business",
+        "best_for": "The business, economics, mergers, sales data, and labor trends in gaming.",
+        "why_read": "The definitive trade publication for tracking market shifts, developer acquisitions, platform revenues, and corporate decisions.",
+        "enabled": 1
+    },
+    {
+        "id": "aftermath",
+        "name": "Aftermath",
+        "site_url": "https://aftermath.site/",
+        "feed_url": "https://aftermath.site/feed",
+        "category": "Gaming: Independent Journalism",
+        "best_for": "Independent games journalism, labor reporting, internet culture, and long-form essays.",
+        "why_read": "Reader-supported, worker-owned cooperative founded by veteran games journalists. Free of corporate SEO incentives with investigative depth.",
+        "enabled": 1
+    },
+    {
+        "id": "nintendolife",
+        "name": "Nintendo Life",
+        "site_url": "https://www.nintendolife.com/",
+        "feed_url": "https://www.nintendolife.com/feed",
+        "category": "Gaming: Nintendo & Console",
+        "best_for": "Dedicated coverage of Nintendo hardware, first-party releases, and eShop indies.",
+        "why_read": "The premier hub for everything Nintendo, tracking hardware news, firmware updates, retro features, and exclusives.",
+        "enabled": 1
+    },
+    {
+        "id": "gematsu",
+        "name": "Gematsu",
+        "site_url": "https://www.gematsu.com/",
+        "feed_url": "https://www.gematsu.com/feed",
+        "category": "Gaming: Announcements & RPGs",
+        "best_for": "Fast announcements, Japanese gaming news, RPGs, and release dates.",
+        "why_read": "Direct, fast feed for press releases, development milestones, translation announcements, and overseas reveals without fluff.",
+        "enabled": 1
+    },
+    {
+        "id": "polygon",
+        "name": "Polygon",
+        "site_url": "https://www.polygon.com/",
+        "feed_url": "https://www.polygon.com/rss/index.xml",
+        "category": "Gaming: Features & Culture",
+        "best_for": "Narrative deep dives, cultural commentary, guides, and long-form essays.",
+        "why_read": "Balances mainstream release coverage with well-researched features examining game histories, artistic direction, and industry shifts.",
+        "enabled": 1
+    },
+    {
+        "id": "siliconera",
+        "name": "Siliconera",
+        "site_url": "https://www.siliconera.com/",
+        "feed_url": "https://www.siliconera.com/feed/",
+        "category": "Gaming: Japanese RPGs & Localization",
+        "best_for": "International video game news, Japanese RPGs, localized indie releases, and developer interviews.",
+        "why_read": "Reliable coverage on release dates, localization status, and overseas developer discussions that Western outlets often overlook.",
+        "enabled": 1
+    }
+]
+
+CURATED_SOURCES_CATALOG = CURATED_LINUX_CATALOG + CURATED_GAMING_CATALOG
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(settings.db_path)
@@ -242,8 +347,8 @@ def init_db():
     );
     """)
 
-    # Seed Curated Linux Sources into Sources table
-    for src in CURATED_LINUX_CATALOG:
+    # Seed Curated Sources (Linux + Gaming) into Sources table
+    for src in CURATED_SOURCES_CATALOG:
         cursor.execute("""
         INSERT INTO sources (id, name, site_url, feed_url, category, best_for, why_read, adapter_type, enabled)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'rss', ?)
@@ -261,4 +366,4 @@ def init_db():
 
     conn.commit()
     conn.close()
-    logger.info("Database initialized with curated Linux Discover Catalog.")
+    logger.info(f"Database initialized with {len(CURATED_SOURCES_CATALOG)} curated publications across Linux and Gaming.")
