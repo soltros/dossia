@@ -117,12 +117,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.getElementById('listen-dossier-btn').addEventListener('click', () => {
         if (!this.currentDossier) return;
-        const textToRead = `${this.currentDossier.title}. Executive summary: ${(this.currentDossier.executive_tldr || []).join('. ')}.`;
+        const textToRead = this.buildFullBriefingAudioScript(this.currentDossier);
         window.dossiaAudio.playSpokenText(this.currentDossier.title, textToRead);
       });
 
       // Load category pills for Dossier view
       this.loadDossierCategories();
+    },
+
+    buildFullBriefingAudioScript(dossier) {
+      const parts = [];
+      const title = dossier.title || 'Daily Intelligence Briefing';
+      const edition = dossier.edition_date || 'Today';
+      
+      parts.push(`Welcome to the Dossia ${title} for ${edition}. I am your autonomous editorial host.`);
+      
+      // Executive Overview
+      parts.push("Here is your Executive 60-Second Overview covering the top technical signals.");
+      (dossier.executive_tldr || []).forEach((b, i) => {
+        const cleanB = b.replace(/\*\*/g, '').replace(/\[.*?\]/g, '').replace(/#+\s*/g, '');
+        parts.push(cleanB);
+      });
+      
+      // Story Capsules
+      const clusters = dossier.story_clusters || [];
+      if (clusters.length > 0) {
+        parts.push(`Now, moving into our ${clusters.length} deep-dive story capsules.`);
+        clusters.forEach((c, idx) => {
+          parts.push(`Story number ${idx + 1}: ${c.headline}.`);
+          if (c.narrative_summary) {
+            const cleanNarrative = c.narrative_summary.replace(/\*\*/g, '').replace(/\[.*?\]/g, '').replace(/#+\s*/g, '');
+            parts.push(cleanNarrative);
+          }
+          if (c.key_takeaways && c.key_takeaways.length > 0) {
+            parts.push("Key technical takeaways for this story:");
+            c.key_takeaways.forEach(t => {
+              const cleanT = t.replace(/\*\*/g, '').replace(/\[.*?\]/g, '').replace(/#+\s*/g, '');
+              parts.push(cleanT);
+            });
+          }
+        });
+      }
+
+      parts.push("This concludes today's Dossia intelligence brief. You can inspect full-text citations and run in-margin Q&A directly on your dashboard. Thank you for listening.");
+      return parts.join("\n\n");
+    },
+
+    formatMarkdown(text) {
+      if (!text) return '';
+      // Escape HTML
+      let html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      
+      // Bold
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code style="background: var(--bg-surface-elevated); padding: 2px 5px; border-radius: 4px; font-size: 0.88em; font-family: var(--font-mono);">$1</code>');
+      // Paragraph breaks
+      const paras = html.split(/\n\s*\n/);
+      if (paras.length > 1) {
+        return paras.map(p => `<p style="margin-bottom: 12px; line-height: 1.65;">${p.trim()}</p>`).join('');
+      }
+      return html;
     },
 
     async loadDossierCategories() {
@@ -173,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const container = document.getElementById('story-clusters-container');
       const bulletsList = document.getElementById('dossier-bullets-list');
 
-      container.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">Synthesizing domain briefing...</div>';
+      container.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">Synthesizing deep domain briefing...</div>';
       bulletsList.innerHTML = '<li>Loading domain briefing highlights...</li>';
 
       try {
@@ -187,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bulletsList.innerHTML = '';
         (dossier.executive_tldr || []).forEach(bullet => {
           const li = document.createElement('li');
-          li.textContent = bullet;
+          li.innerHTML = this.formatMarkdown(bullet);
           bulletsList.appendChild(li);
         });
 
@@ -204,11 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const sourcesHtml = (cluster.sources || []).map(s => `
             <button class="source-pill" data-article-id="${s.id}">
-              <span>📄</span> ${s.publisher || 'Source'}: ${s.title.substring(0, 32)}...
+              <span>📄</span> ${s.publisher || 'Source'}: ${s.title.substring(0, 36)}...
             </button>
           `).join('');
 
-          const takeawaysHtml = (cluster.key_takeaways || []).map(t => `<li>${t}</li>`).join('');
+          const takeawaysHtml = (cluster.key_takeaways || []).map(t => `
+            <li style="margin-bottom: 8px; line-height: 1.5;">${this.formatMarkdown(t)}</li>
+          `).join('');
 
           card.innerHTML = `
             <div class="capsule-top">
@@ -216,17 +276,19 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="signal-badge">${cluster.signal_badge || 'High Signal'}</span>
             </div>
             <h2 class="capsule-headline serif-heading">${cluster.headline}</h2>
-            <p class="capsule-narrative">${cluster.narrative_summary}</p>
+            <div class="capsule-narrative" style="color: var(--text-secondary); margin-bottom: 20px;">
+              ${this.formatMarkdown(cluster.narrative_summary)}
+            </div>
             
             <div class="capsule-takeaways">
               <div class="takeaways-title">Key Developments & Technical Implications</div>
-              <ul class="takeaways-list">
+              <ul class="takeaways-list" style="margin-top: 10px; padding-left: 18px;">
                 ${takeawaysHtml}
               </ul>
             </div>
 
             <div class="capsule-footer">
-              <div class="capsule-sources">
+              <div class="capsule-sources" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                 <span style="font-size: 0.76rem; font-family: var(--font-mono); color: var(--text-muted);">Sources:</span>
                 ${sourcesHtml || '<span style="font-size: 0.8rem; color: var(--text-muted);">Curated synthesis</span>'}
               </div>
@@ -240,7 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
           // Event listeners
           card.querySelector('.listen-cluster-btn').addEventListener('click', () => {
-            window.dossiaAudio.playSpokenText(cluster.headline, `${cluster.headline}. ${cluster.narrative_summary}`);
+            const clusterSpeech = `${cluster.headline}. ${cluster.narrative_summary}. Key takeaways: ${(cluster.key_takeaways || []).join('. ')}`;
+            window.dossiaAudio.playSpokenText(cluster.headline, clusterSpeech);
           });
 
           card.querySelectorAll('.source-pill').forEach(pill => {
