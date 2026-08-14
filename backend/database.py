@@ -316,7 +316,110 @@ CURATED_LABOR_CATALOG = [
     }
 ]
 
-CURATED_SOURCES_CATALOG = CURATED_LINUX_CATALOG + CURATED_GAMING_CATALOG + CURATED_LABOR_CATALOG
+CURATED_CULTURE_CATALOG = [
+    {
+        "id": "vulture",
+        "name": "Vulture (New York Magazine)",
+        "site_url": "https://www.vulture.com/",
+        "feed_url": "https://feeds.feedburner.com/nymag/vulture",
+        "category": "Culture: Criticism & Pop Culture",
+        "best_for": "Cultural criticism, television/film analysis, and smart pop culture journalism.",
+        "why_read": "Treats modern entertainment with intellectual rigor and sharp humor, deconstructing modern media tropes and industry trends.",
+        "enabled": 1
+    },
+    {
+        "id": "pucknews",
+        "name": "Puck News (What I'm Hearing)",
+        "site_url": "https://puck.news/",
+        "feed_url": "https://puck.news/feed/",
+        "category": "Culture: Hollywood Business & Labor",
+        "best_for": "Hard-nosed Hollywood business realities, executive infighting, and studio economics.",
+        "why_read": "Matt Belloni skips press-junket fluff to focus on streaming deficits, executive churn, litigation, and behind-the-scenes labor struggles.",
+        "enabled": 1
+    },
+    {
+        "id": "theankler",
+        "name": "The Ankler",
+        "site_url": "https://theankler.com/",
+        "feed_url": "https://theankler.com/feed",
+        "category": "Culture: Industry Shakeups",
+        "best_for": "Unvarnished Hollywood insider reporting, labor realities, and media shakeups.",
+        "why_read": "Refuses to parrot studio PR, focusing on union negotiations, executive missteps, and entertainment industry shifts.",
+        "enabled": 1
+    },
+    {
+        "id": "defector",
+        "name": "Defector",
+        "site_url": "https://defector.com/",
+        "feed_url": "https://defector.com/feed/",
+        "category": "Culture: Worker-Owned Essays",
+        "best_for": "Worker-owned cultural commentary, media critiques, and anti-corporate essays.",
+        "why_read": "Subscriber-owned cooperative featuring sharp pop-culture essays, media ecosystem critiques, and zero access journalism.",
+        "enabled": 1
+    },
+    {
+        "id": "avclub",
+        "name": "The A.V. Club",
+        "site_url": "https://www.avclub.com/",
+        "feed_url": "https://www.avclub.com/rss",
+        "category": "Culture: Film & TV Reviews",
+        "best_for": "Film and TV reviews, pop culture roundups, and media analysis.",
+        "why_read": "Focuses on the art and cultural impact of film, television, and music rather than celebrity lifestyle coverage.",
+        "enabled": 1
+    },
+    {
+        "id": "popula",
+        "name": "Popula",
+        "site_url": "https://popula.com/",
+        "feed_url": "https://popula.com/feed/",
+        "category": "Culture: Alternative Essays",
+        "best_for": "Alternative cultural essays, international perspectives, and media literacy.",
+        "why_read": "Ad-free publication and Brick House cooperative member examining how wealth, power, and entertainment intersect in culture.",
+        "enabled": 1
+    },
+    {
+        "id": "indiewire",
+        "name": "IndieWire",
+        "site_url": "https://www.indiewire.com/",
+        "feed_url": "https://www.indiewire.com/feed/",
+        "category": "Culture: Indie Film & Craft",
+        "best_for": "Independent filmmaking, festival circuits, and director/craft-focused reporting.",
+        "why_read": "Prioritizes screenwriting, cinematography, and production mechanics over celebrity gossip and influencer lifestyles.",
+        "enabled": 1
+    },
+    {
+        "id": "thr_business",
+        "name": "The Hollywood Reporter: Business & Labor",
+        "site_url": "https://www.hollywoodreporter.com/c/business/",
+        "feed_url": "https://www.hollywoodreporter.com/c/business/feed/",
+        "category": "Culture: Labor & Guilds",
+        "best_for": "Tracking strikes, union contracts (WGA, SAG-AFTRA, IATSE), and legal battles.",
+        "why_read": "Essential reading on working conditions of below-the-line crews, guild negotiations, and entertainment anti-trust challenges.",
+        "enabled": 1
+    },
+    {
+        "id": "laineygossip",
+        "name": "Lainey Gossip",
+        "site_url": "https://www.laineygossip.com/",
+        "feed_url": "https://www.laineygossip.com/rss",
+        "category": "Culture: PR Deconstruction",
+        "best_for": "Deconstructing celebrity PR strategies, media manipulation, and fame culture.",
+        "why_read": "Approaches celebrity news to analyze the mechanics of Hollywood public relations, statements, and calculated media moves.",
+        "enabled": 1
+    },
+    {
+        "id": "nofilmschool",
+        "name": "No Film School",
+        "site_url": "https://nofilmschool.com/",
+        "feed_url": "https://nofilmschool.com/rss.xml",
+        "category": "Culture: Filmmaking & Crew Reality",
+        "best_for": "Ground-level production reality, working-crew perspectives, and filmmaking economics.",
+        "why_read": "Covers entertainment from the perspective of on-set crews, detailing market conditions and production realities without glamor.",
+        "enabled": 1
+    }
+]
+
+CURATED_SOURCES_CATALOG = CURATED_LINUX_CATALOG + CURATED_GAMING_CATALOG + CURATED_LABOR_CATALOG + CURATED_CULTURE_CATALOG
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(settings.db_path)
