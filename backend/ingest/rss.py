@@ -29,8 +29,11 @@ async def ingest_feed(source_id: str, feed_url: str, category: str, default_publ
     cursor = conn.cursor()
     new_articles_count = 0
 
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0 (Dossia News Reader)"
+    }
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
             resp = await client.get(feed_url, follow_redirects=True)
             if resp.status_code != 200:
                 logger.warning(f"Failed to fetch feed {feed_url}: status {resp.status_code}")

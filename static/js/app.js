@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.initNavigation();
       this.initSearchModal();
       this.initDossierView();
+      this.initDiscoverView();
       this.initReservoirView();
       this.initPodcastView();
       this.initSettingsView();
@@ -79,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         v.classList.toggle('active', v.id === tabId);
       });
 
+      if (tabId === 'discover-view') this.loadDiscoverCatalog();
       if (tabId === 'reservoir-view') this.loadReservoirArticles();
       if (tabId === 'podcast-view') this.loadPodcastEpisodes();
       if (tabId === 'settings-view') this.loadSettings();
@@ -199,7 +201,116 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     // --------------------------------------------------------------------------
-    // View 2: Curated Knowledge Reservoir
+    // View 2: Discover & Source Directory
+    // --------------------------------------------------------------------------
+    initDiscoverView() {
+      document.getElementById('discover-sync-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('discover-sync-btn');
+        btn.innerHTML = '<span>⏳</span> Ingesting...';
+        try {
+          const res = await API.triggerIngest();
+          alert(`Ingestion complete! Fetched ${res.total_new_articles} new articles.`);
+          this.loadDiscoverCatalog();
+        } catch (e) {
+          alert(`Ingestion error: ${e.message}`);
+        } finally {
+          btn.innerHTML = '<span>⚡</span> Ingest Followed Feeds';
+        }
+      });
+
+      document.getElementById('discover-enable-all-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('discover-enable-all-btn');
+        const isFollowAll = btn.textContent.includes('Follow All');
+        await API.batchToggleDiscover(isFollowAll);
+        btn.innerHTML = isFollowAll ? '<span>✕</span> Unfollow All' : '<span>✓</span> Follow All';
+        this.loadDiscoverCatalog();
+      });
+    },
+
+    async loadDiscoverCatalog(selectedCategory = 'all') {
+      const container = document.getElementById('discover-catalog-container');
+      const pillsContainer = document.getElementById('discover-category-pills');
+      const statsLabel = document.getElementById('discover-stats-label');
+
+      container.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">Loading curated catalog...</div>';
+
+      try {
+        const catalog = await API.getDiscover();
+        statsLabel.textContent = `${catalog.followed_count} of ${catalog.total} Channels Followed`;
+
+        // Render Category Pills
+        pillsContainer.innerHTML = '';
+        const allPill = document.createElement('button');
+        allPill.className = `filter-pill ${selectedCategory === 'all' ? 'active' : ''}`;
+        allPill.textContent = 'All Categories';
+        allPill.addEventListener('click', () => this.loadDiscoverCatalog('all'));
+        pillsContainer.appendChild(allPill);
+
+        (catalog.categories || []).forEach(cat => {
+          const pill = document.createElement('button');
+          pill.className = `filter-pill ${selectedCategory === cat ? 'active' : ''}`;
+          pill.textContent = cat;
+          pill.addEventListener('click', () => this.loadDiscoverCatalog(cat));
+          pillsContainer.appendChild(pill);
+        });
+
+        // Filter sources
+        const filtered = (catalog.sources || []).filter(s => {
+          return selectedCategory === 'all' || s.category === selectedCategory;
+        });
+
+        container.innerHTML = '';
+        filtered.forEach(src => {
+          const card = document.createElement('div');
+          card.className = 'story-capsule';
+          card.style.cssText = 'padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;';
+
+          const isFollowed = src.enabled === 1;
+
+          card.innerHTML = `
+            <div>
+              <div class="capsule-top" style="margin-bottom: 8px;">
+                <span class="capsule-category">${src.category}</span>
+                <span class="signal-badge" style="background: ${isFollowed ? 'var(--accent-surface)' : 'var(--badge-bg)'}; color: ${isFollowed ? 'var(--accent-primary)' : 'var(--text-muted)'};">
+                  ${isFollowed ? '🟢 Followed' : 'Inactive'}
+                </span>
+              </div>
+              <h3 class="serif-heading" style="font-size: 1.35rem; margin-bottom: 6px;">
+                <a href="${src.site_url || '#'}" target="_blank" title="Visit website" style="display: inline-flex; align-items: center; gap: 6px;">
+                  ${src.name} <span style="font-size: 0.8rem; color: var(--accent-primary);">↗</span>
+                </a>
+              </h3>
+              <p style="font-size: 0.86rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
+                ${src.why_read || src.best_for || ''}
+              </p>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+              <span style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--text-muted);">
+                ${src.best_for ? '🎯 ' + src.best_for.substring(0, 36) + '...' : 'Curated feed'}
+              </span>
+              <button class="btn-${isFollowed ? 'secondary' : 'primary'} toggle-follow-btn" style="padding: 6px 14px; font-size: 0.8rem;">
+                ${isFollowed ? 'Unfollow' : 'Follow +'}
+              </button>
+            </div>
+          `;
+
+          card.querySelector('.toggle-follow-btn').addEventListener('click', async () => {
+            const nextState = src.enabled !== 1;
+            await API.toggleDiscover(src.id, nextState);
+            this.loadDiscoverCatalog(selectedCategory);
+          });
+
+          container.appendChild(card);
+        });
+
+      } catch (e) {
+        container.innerHTML = `<div style="padding: 20px; color: red;">Failed to load catalog: ${e.message}</div>`;
+      }
+    },
+
+    // --------------------------------------------------------------------------
+    // View 3: Curated Knowledge Reservoir
     // --------------------------------------------------------------------------
     initReservoirView() {
       document.querySelectorAll('#category-filters-container .filter-pill').forEach(pill => {

@@ -12,6 +12,7 @@ from backend.routes.articles import router as articles_router
 from backend.routes.podcast import router as podcast_router
 from backend.routes.hermes import router as hermes_router
 from backend.routes.settings import router as settings_router
+from backend.routes.discover import router as discover_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("dossia")
@@ -62,6 +63,7 @@ app.include_router(articles_router)
 app.include_router(podcast_router)
 app.include_router(hermes_router)
 app.include_router(settings_router)
+app.include_router(discover_router)
 
 # Mount audio media files
 app.mount("/audio", StaticFiles(directory=str(MEDIA_DIR)), name="audio")

@@ -24,6 +24,9 @@
         <button class="nav-tab active" data-tab="dossier-view" id="nav-dossier-tab">
           <span>📰</span> Daily Dossier
         </button>
+        <button class="nav-tab" data-tab="discover-view" id="nav-discover-tab">
+          <span>🧭</span> Discover
+        </button>
         <button class="nav-tab" data-tab="reservoir-view" id="nav-reservoir-tab">
           <span>📚</span> Reservoir
         </button>
@@ -93,7 +96,38 @@
       </div>
     </section>
 
-    <!-- VIEW 2: Curated Reservoir Stream -->
+    <!-- VIEW 2: Discover & Source Directory -->
+    <section class="tab-view" id="discover-view">
+      <div class="dossier-header">
+        <div>
+          <div class="dossier-meta-edition">Curated Channels & Publications</div>
+          <h1 class="dossier-title">Discover Channels</h1>
+        </div>
+        <div class="dossier-actions">
+          <button class="btn-secondary" id="discover-enable-all-btn">
+            <span>✓</span> Follow All
+          </button>
+          <button class="btn-primary" id="discover-sync-btn">
+            <span>⚡</span> Ingest Followed Feeds
+          </button>
+        </div>
+      </div>
+
+      <div class="reservoir-filter-bar">
+        <div class="category-filter-pills" id="discover-category-pills">
+          <button class="filter-pill active" data-cat="all">All Categories</button>
+        </div>
+        <div style="font-size: 0.84rem; color: var(--text-muted); font-family: var(--font-mono);" id="discover-stats-label">
+          10 Channels Curated
+        </div>
+      </div>
+
+      <div class="story-clusters-grid" id="discover-catalog-container" style="grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: Curated Reservoir Stream -->
     <section class="tab-view" id="reservoir-view">
       <div class="dossier-header">
         <div>

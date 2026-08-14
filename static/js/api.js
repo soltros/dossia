@@ -77,6 +77,27 @@ const API = {
     return res.json();
   },
 
+  async getDiscover() {
+    const res = await fetch('/api/discover');
+    return res.json();
+  },
+
+  async toggleDiscover(sourceId, enabled) {
+    const res = await fetch(`/api/discover/${sourceId}/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    });
+    return res.json();
+  },
+
+  async batchToggleDiscover(enabled, category = 'all') {
+    let url = `/api/discover/batch?enabled=${enabled}`;
+    if (category && category !== 'all') url += `&category=${encodeURIComponent(category)}`;
+    const res = await fetch(url, { method: 'POST' });
+    return res.json();
+  },
+
   async speakText(title, text) {
     const res = await fetch('/api/tts/speak', {
       method: 'POST',
