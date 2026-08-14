@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import httpx
 from backend.config import settings, MEDIA_DIR
+from backend.ingest.cleaner import sanitize_for_speech
 
 logger = logging.getLogger("dossia.podcast.tts")
 
@@ -21,6 +22,9 @@ class TTSEngine:
         output_path = MEDIA_DIR / filename
         voice_to_use = voice or cls.DEFAULT_VOICE
         
+        # Rigorously sanitize text for natural speech (strips all URLs, brackets, markdown)
+        clean_spoken_text = sanitize_for_speech(text)
+        
         # 1. Check if remote custom TTS endpoint is configured
         tts_endpoint = os.getenv("TTS_API_URL", "")
         if tts_endpoint:
@@ -28,7 +32,7 @@ class TTSEngine:
                 headers = {"Content-Type": "application/json"}
                 payload = {
                     "model": "tts-1",
-                    "input": text,
+                    "input": clean_spoken_text,
                     "voice": voice_to_use
                 }
                 async with httpx.AsyncClient(timeout=90.0) as client:
@@ -44,7 +48,7 @@ class TTSEngine:
         # 2. Built-in Neural TTS synthesis via edge-tts
         try:
             import edge_tts
-            communicate = edge_tts.Communicate(text, voice_to_use)
+            communicate = edge_tts.Communicate(clean_spoken_text, voice_to_use)
             await communicate.save(str(output_path))
             logger.info(f"Synthesized neural speech -> {output_path} ({os.path.getsize(output_path)} bytes)")
             return f"/audio/{filename}"

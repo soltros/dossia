@@ -70,20 +70,58 @@ class DossiaAudioPlayer {
     }
   }
 
+  sanitizeSpeechText(text) {
+    if (!text) return '';
+    let t = text;
+    // 1. Unwrap markdown links: [Label](url) -> Label
+    t = t.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+
+    // 2. Strip all remaining URLs, domains, and protocols
+    t = t.replace(/https?:\/\/\S+/gi, '');
+    t = t.replace(/www\.\S+/gi, '');
+    t = t.replace(/mailto:\S+/gi, '');
+    t = t.replace(/\S+@\S+\.\S+/g, '');
+    
+    // 3. Strip isolated URL paths & file extensions
+    t = t.replace(/\(\/[^\)]+\)/g, '');
+    t = t.replace(/\/[A-Za-z0-9_\-\.\/]{2,}/g, '');
+    t = t.replace(/\.(php|html|htm|xml|json|rss|atom|asp|aspx|jsp)/gi, '');
+    
+    // 4. Clean brackets like [1], [2], [$], [#], but keep words
+    t = t.replace(/\[\s*[\d\$#\*\-]+\s*\]/g, '');
+    t = t.replace(/\[\s*\]/g, '');
+    
+    // 5. Clean version numbers and CVEs for natural reading
+    t = t.replace(/\bCVE-(\d{4})-(\d+)\b/gi, 'C V E $1 $2');
+    t = t.replace(/\bversion\s+v(\d+)/gi, 'version $1');
+    t = t.replace(/\bv(\d+)\.(\d+)\.(\d+)\b/gi, 'version $1 point $2 point $3');
+    t = t.replace(/\bv(\d+)\.(\d+)\b/gi, 'version $1 point $2');
+    
+    // 6. Strip markdown symbols, currencies, hashes, backticks, slashes, pipes
+    t = t.replace(/[`*~_#|<>\/\\\^=+%\$]/g, ' ');
+    t = t.replace(/[{}\[\]\(\)]/g, ' ');
+    t = t.replace(/—|–|--+/g, ' — ');
+    
+    return t.replace(/\s+/g, ' ').trim();
+  }
+
   async playSpokenText(title, text) {
     this.audioEl.pause();
     this.stopSpeech();
     this.isSpeechSynthesis = false;
     
-    this.titleEl.textContent = `🎙️ ${title}`;
+    const cleanSpokenText = this.sanitizeSpeechText(text);
+    const cleanTitle = this.sanitizeSpeechText(title);
+
+    this.titleEl.textContent = `🎙️ ${cleanTitle}`;
     this.chapterEl.textContent = 'Synthesizing Neural Speech...';
     this.playPauseBtn.textContent = '⏳';
     this.currentChapters = [];
     this.chapterSelect.innerHTML = '<option>Full Audio</option>';
 
     try {
-      // Use server-side neural voice synthesis
-      const res = await API.speakText(title, text);
+      // Use server-side neural voice synthesis with clean text
+      const res = await API.speakText(cleanTitle, cleanSpokenText);
       if (res && res.audio_url) {
         this.chapterEl.textContent = 'Neural Broadcast Voice';
         this.audioEl.src = res.audio_url;
@@ -100,7 +138,7 @@ class DossiaAudioPlayer {
     if ('speechSynthesis' in window) {
       this.isSpeechSynthesis = true;
       this.chapterEl.textContent = 'Browser Speech Engine';
-      this.speechUtterance = new SpeechSynthesisUtterance(text);
+      this.speechUtterance = new SpeechSynthesisUtterance(cleanSpokenText);
       this.speechUtterance.rate = this.currentSpeed;
       this.speechUtterance.onend = () => {
         this.playPauseBtn.textContent = '▶';
