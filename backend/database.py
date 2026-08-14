@@ -9,9 +9,10 @@ from backend.catalog_data import CURATED_SOURCES_CATALOG
 logger = logging.getLogger("dossia.db")
 
 def get_db_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(settings.db_path)
+    conn = sqlite3.connect(settings.db_path, timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=30000;")
     conn.execute("PRAGMA foreign_keys=ON;")
     return conn
 
@@ -100,11 +101,17 @@ def init_db():
         id TEXT PRIMARY KEY,
         edition_date TEXT NOT NULL,
         edition_type TEXT DEFAULT 'morning',
+        category TEXT DEFAULT 'all',
         title TEXT NOT NULL,
         executive_tldr TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    cursor.execute("PRAGMA table_info(dossiers);")
+    existing_dossier_cols = [col[1] for col in cursor.fetchall()]
+    if "category" not in existing_dossier_cols:
+        cursor.execute("ALTER TABLE dossiers ADD COLUMN category TEXT DEFAULT 'all';")
 
     # 5. Story Clusters table
     cursor.execute("""

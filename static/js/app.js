@@ -94,41 +94,94 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     // --------------------------------------------------------------------------
-    // View 1: The Daily Dossier
+    // View 1: The Daily Dossier & Category Briefings
     // --------------------------------------------------------------------------
+    selectedDossierCategory: 'all',
+    selectedReservoirCategory: 'all',
+
     initDossierView() {
       document.getElementById('synth-new-dossier-btn').addEventListener('click', async () => {
         const btn = document.getElementById('synth-new-dossier-btn');
-        btn.innerHTML = '<span>⏳</span> Synthesizing...';
+        btn.innerHTML = '<span>⏳</span> Synthesizing Briefing...';
         btn.disabled = true;
         try {
-          await API.generateDossier('morning');
-          await this.loadDossier();
+          await API.generateDossier('morning', this.selectedDossierCategory);
+          await this.loadDossier(this.selectedDossierCategory);
         } catch (e) {
           alert(`Synthesis error: ${e.message}`);
         } finally {
-          btn.innerHTML = '<span>✨</span> Re-Synthesize with Hermes';
+          btn.innerHTML = '<span>✨</span> Re-Synthesize Briefing';
           btn.disabled = false;
         }
       });
 
       document.getElementById('listen-dossier-btn').addEventListener('click', () => {
         if (!this.currentDossier) return;
-        const textToRead = `${this.currentDossier.title}. Executive summary: ${this.currentDossier.executive_tldr.join('. ')}.`;
+        const textToRead = `${this.currentDossier.title}. Executive summary: ${(this.currentDossier.executive_tldr || []).join('. ')}.`;
         window.dossiaAudio.playSpokenText(this.currentDossier.title, textToRead);
       });
+
+      // Load category pills for Dossier view
+      this.loadDossierCategories();
     },
 
-    async loadDossier() {
+    async loadDossierCategories() {
+      const pillsContainer = document.getElementById('dossier-category-pills');
+      if (!pillsContainer) return;
+
+      try {
+        const catRes = await API.getDossierCategories();
+        const categories = catRes.categories || [];
+
+        pillsContainer.innerHTML = '';
+        
+        // "All Intelligence" master pill
+        const allBtn = document.createElement('button');
+        allBtn.className = `filter-pill ${this.selectedDossierCategory === 'all' ? 'active' : ''}`;
+        allBtn.textContent = 'All Intelligence';
+        allBtn.addEventListener('click', () => {
+          this.selectedDossierCategory = 'all';
+          this.highlightPill(pillsContainer, allBtn);
+          this.loadDossier('all');
+        });
+        pillsContainer.appendChild(allBtn);
+
+        // Domain-specific category pills
+        categories.forEach(item => {
+          const pill = document.createElement('button');
+          pill.className = `filter-pill ${this.selectedDossierCategory === item.category ? 'active' : ''}`;
+          pill.textContent = item.category;
+          pill.title = `${item.article_count || 0} articles from ${item.source_count || 0} sources`;
+          pill.addEventListener('click', () => {
+            this.selectedDossierCategory = item.category;
+            this.highlightPill(pillsContainer, pill);
+            this.loadDossier(item.category);
+          });
+          pillsContainer.appendChild(pill);
+        });
+      } catch (e) {
+        console.error('Failed to load dossier categories:', e);
+      }
+    },
+
+    highlightPill(container, activePill) {
+      container.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      activePill.classList.add('active');
+    },
+
+    async loadDossier(category = 'all') {
       const container = document.getElementById('story-clusters-container');
       const bulletsList = document.getElementById('dossier-bullets-list');
 
+      container.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">Synthesizing domain briefing...</div>';
+      bulletsList.innerHTML = '<li>Loading domain briefing highlights...</li>';
+
       try {
-        const dossier = await API.getLatestDossier();
+        const dossier = await API.getLatestDossier(category);
         this.currentDossier = dossier;
 
-        document.getElementById('dossier-title-text').textContent = dossier.title || 'The Daily Intelligence Dossier';
-        document.getElementById('dossier-edition-label').textContent = `${dossier.edition_type || 'Morning'} Edition • ${dossier.edition_date || 'Today'}`;
+        document.getElementById('dossier-title-text').textContent = dossier.title || `${category} Intelligence Briefing`;
+        document.getElementById('dossier-edition-label').textContent = `${dossier.edition_type ? dossier.edition_type.toUpperCase() : 'DAILY'} BRIEFING • ${dossier.edition_date || 'Today'}`;
 
         // Render executive bullets
         bulletsList.innerHTML = '';
@@ -140,6 +193,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render story clusters
         container.innerHTML = '';
+        if (!dossier.story_clusters || dossier.story_clusters.length === 0) {
+          container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); grid-column: 1 / -1;">No story clusters yet for ${category}. Click "Re-Synthesize Briefing" to generate one.</div>`;
+          return;
+        }
+
         (dossier.story_clusters || []).forEach(cluster => {
           const card = document.createElement('article');
           card.className = 'story-capsule';
@@ -154,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           card.innerHTML = `
             <div class="capsule-top">
-              <span class="capsule-category">${cluster.category || 'General'}</span>
+              <span class="capsule-category">${cluster.category || category}</span>
               <span class="signal-badge">${cluster.signal_badge || 'High Signal'}</span>
             </div>
             <h2 class="capsule-headline serif-heading">${cluster.headline}</h2>
@@ -196,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
       } catch (e) {
-        bulletsList.innerHTML = `<li>Could not load dossier: ${e.message}</li>`;
+        bulletsList.innerHTML = `<li>Could not load briefing: ${e.message}</li>`;
       }
     },
 
@@ -313,21 +371,53 @@ document.addEventListener('DOMContentLoaded', () => {
     // View 3: Curated Knowledge Reservoir
     // --------------------------------------------------------------------------
     initReservoirView() {
-      document.querySelectorAll('#category-filters-container .filter-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-          document.querySelectorAll('#category-filters-container .filter-pill').forEach(p => p.classList.remove('active'));
-          pill.classList.add('active');
-          this.loadReservoirArticles(pill.getAttribute('data-cat'));
-        });
-      });
-
       document.getElementById('reservoir-sync-btn').addEventListener('click', async () => {
         const btn = document.getElementById('reservoir-sync-btn');
         btn.textContent = 'Ingesting...';
         await API.triggerIngest();
         btn.textContent = '⚡ Ingest All Sources';
-        this.loadReservoirArticles();
+        this.loadReservoirCategories();
+        this.loadReservoirArticles(this.selectedReservoirCategory);
       });
+
+      this.loadReservoirCategories();
+    },
+
+    async loadReservoirCategories() {
+      const pillsContainer = document.getElementById('category-filters-container');
+      if (!pillsContainer) return;
+
+      try {
+        const catRes = await API.getDossierCategories();
+        const categories = catRes.categories || [];
+
+        pillsContainer.innerHTML = '';
+        
+        // "All Channels" pill
+        const allBtn = document.createElement('button');
+        allBtn.className = `filter-pill ${this.selectedReservoirCategory === 'all' ? 'active' : ''}`;
+        allBtn.textContent = 'All Channels';
+        allBtn.addEventListener('click', () => {
+          this.selectedReservoirCategory = 'all';
+          this.highlightPill(pillsContainer, allBtn);
+          this.loadReservoirArticles('all');
+        });
+        pillsContainer.appendChild(allBtn);
+
+        categories.forEach(item => {
+          const pill = document.createElement('button');
+          pill.className = `filter-pill ${this.selectedReservoirCategory === item.category ? 'active' : ''}`;
+          pill.textContent = `${item.category} (${item.article_count || 0})`;
+          pill.addEventListener('click', () => {
+            this.selectedReservoirCategory = item.category;
+            this.highlightPill(pillsContainer, pill);
+            this.loadReservoirArticles(item.category);
+          });
+          pillsContainer.appendChild(pill);
+        });
+      } catch (e) {
+        console.error('Failed to load reservoir categories:', e);
+      }
     },
 
     async loadReservoirArticles(category = 'all') {

@@ -7,22 +7,35 @@ from backend.hermes.synthesizer import generate_daily_dossier
 router = APIRouter(prefix="/api/dossiers", tags=["dossiers"])
 
 @router.get("/latest")
-async def get_latest_dossier():
+async def get_latest_dossier(category: Optional[str] = "all"):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT id, edition_date, edition_type, title, executive_tldr, created_at
-    FROM dossiers
-    ORDER BY created_at DESC
-    LIMIT 1;
-    """)
+    is_cat = category and category.lower() != "all"
+
+    if is_cat:
+        cursor.execute("""
+        SELECT id, edition_date, edition_type, category, title, executive_tldr, created_at
+        FROM dossiers
+        WHERE category = ?
+        ORDER BY created_at DESC
+        LIMIT 1;
+        """, (category,))
+    else:
+        cursor.execute("""
+        SELECT id, edition_date, edition_type, category, title, executive_tldr, created_at
+        FROM dossiers
+        WHERE category = 'all' OR category IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1;
+        """)
+
     dossier_row = cursor.fetchone()
 
     if not dossier_row:
         conn.close()
-        # Automatically generate the first inaugural dossier
-        new_dossier = await generate_daily_dossier(edition_type="morning")
+        # Automatically generate on-demand briefing for this category
+        new_dossier = await generate_daily_dossier(edition_type="morning", category=category or "all")
         return new_dossier
 
     dossier = dict(dossier_row)
@@ -40,7 +53,7 @@ async def get_latest_dossier():
     for c_row in cursor.fetchall():
         c = dict(c_row)
         c["key_takeaways"] = json.loads(c["key_takeaways"])
-        source_ids = json.loads(c["source_article_ids"])
+        source_ids = json.loads(c["source_article_ids"]) if c["source_article_ids"] else []
         
         # Hydrate source articles
         sources = []
@@ -60,15 +73,44 @@ async def get_latest_dossier():
     conn.close()
     return dossier
 
-@router.get("")
-async def list_dossiers():
+@router.get("/categories")
+async def list_dossier_categories():
+    """Returns available categories with counts of articles and followed sources."""
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     cursor.execute("""
-    SELECT id, edition_date, edition_type, title, executive_tldr, created_at
-    FROM dossiers
-    ORDER BY created_at DESC;
+    SELECT s.category, COUNT(DISTINCT s.id) as source_count, COUNT(a.id) as article_count
+    FROM sources s
+    LEFT JOIN articles a ON s.id = a.source_id
+    GROUP BY s.category
+    ORDER BY s.category ASC;
     """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    categories = [dict(r) for r in rows]
+    return {"categories": categories}
+
+@router.get("")
+async def list_dossiers(category: Optional[str] = None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if category and category.lower() != "all":
+        cursor.execute("""
+        SELECT id, edition_date, edition_type, category, title, executive_tldr, created_at
+        FROM dossiers
+        WHERE category = ?
+        ORDER BY created_at DESC;
+        """, (category,))
+    else:
+        cursor.execute("""
+        SELECT id, edition_date, edition_type, category, title, executive_tldr, created_at
+        FROM dossiers
+        ORDER BY created_at DESC;
+        """)
+
     rows = cursor.fetchall()
     conn.close()
     
@@ -80,6 +122,6 @@ async def list_dossiers():
     return dossiers
 
 @router.post("/generate")
-async def trigger_dossier_generation(edition_type: str = "morning"):
-    dossier = await generate_daily_dossier(edition_type=edition_type)
+async def trigger_dossier_generation(edition_type: str = "morning", category: Optional[str] = "all"):
+    dossier = await generate_daily_dossier(edition_type=edition_type, category=category or "all")
     return {"status": "success", "dossier": dossier}

@@ -8,78 +8,86 @@ from backend.hermes.client import HermesClient
 
 logger = logging.getLogger("dossia.synthesizer")
 
-async def generate_daily_dossier(edition_type: str = "morning") -> Dict[str, Any]:
+async def generate_daily_dossier(edition_type: str = "morning", category: Optional[str] = "all") -> Dict[str, Any]:
     """
-    Synthesizes the latest batch of articles in the reservoir into a structured Daily Intelligence Dossier.
+    Synthesizes the latest batch of articles in the reservoir into a structured Daily Intelligence Dossier
+    or a dedicated Category Briefing.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Get recent high-signal articles
-    cursor.execute("""
-    SELECT id, title, url, publisher, author, summary, clean_content, tags, reading_time_minutes
-    FROM articles
-    ORDER BY created_at DESC
-    LIMIT 25;
-    """)
+    is_category_briefing = category and category.lower() != "all"
+    selected_category = category if is_category_briefing else "all"
+
+    # Query recent high-signal articles for this domain
+    if is_category_briefing:
+        cursor.execute("""
+        SELECT a.id, a.title, a.url, a.publisher, a.author, a.summary, a.clean_content, a.tags, a.reading_time_minutes, s.category
+        FROM articles a
+        JOIN sources s ON a.source_id = s.id
+        WHERE s.category = ?
+        ORDER BY a.published_at DESC, a.created_at DESC
+        LIMIT 30;
+        """, (category,))
+    else:
+        cursor.execute("""
+        SELECT a.id, a.title, a.url, a.publisher, a.author, a.summary, a.clean_content, a.tags, a.reading_time_minutes, s.category
+        FROM articles a
+        JOIN sources s ON a.source_id = s.id
+        ORDER BY a.published_at DESC, a.created_at DESC
+        LIMIT 30;
+        """)
+
     articles = cursor.fetchall()
 
     if not articles:
-        # If no articles, generate an editorial demo dossier
-        articles_summary_text = "Recent updates across Linux kernels, AI context reasoning, and distributed systems."
+        articles_summary_text = f"Recent developments in {selected_category}."
     else:
         articles_summary_text = "\n\n".join([
-            f"ID: {a['id']}\nTitle: {a['title']}\nPublisher: {a['publisher']}\nExcerpt: {a['summary'][:250]}"
-            for a in articles[:15]
+            f"ID: {a['id']}\nTitle: {a['title']}\nPublisher: {a['publisher']}\nCategory: {a['category']}\nExcerpt: {(a['summary'] or a['clean_content'] or '')[:300]}"
+            for a in articles[:18]
         ])
 
     client = HermesClient()
     
+    category_title = f"{selected_category} Intelligence Briefing" if is_category_briefing else f"The {edition_type.capitalize()} Intelligence Dossier"
+
     prompt = f"""
 You are Hermes, the autonomous Editor-in-Chief for Dossia.
-Synthesize the following recent articles into a cohesive, high-craft "Daily Intelligence Dossier".
+Synthesize the following recent articles into a cohesive, high-craft domain briefing titled "{category_title}".
+
+Focus Area: {selected_category if is_category_briefing else "Comprehensive Multi-Disciplinary Briefing"}
 
 Input Articles:
 {articles_summary_text}
 
 Output MUST be a valid JSON object matching this exact schema:
 {{
-  "title": "The Morning Intelligence Dossier",
+  "title": "{category_title}",
   "executive_tldr": [
-    "High-impact bullet point 1 on major technological breakthrough",
-    "High-impact bullet point 2 on systems or infrastructure updates",
-    "High-impact bullet point 3 on open source and toolchain shifts"
+    "High-impact bullet point 1 specifically summarizing a critical development",
+    "High-impact bullet point 2 detailing architectural, technical, or ecosystem shift",
+    "High-impact bullet point 3 detailing actionable takeaways or trends"
   ],
   "story_clusters": [
     {{
-      "headline": "Systems & MicroVMs: The Push for Sub-Millisecond Isolation",
-      "category": "Systems & Cloud",
+      "headline": "Domain Cluster Headline",
+      "category": "{selected_category if is_category_briefing else 'Main Category'}",
       "narrative_summary": "Comprehensive 2-3 paragraph editorial synthesis breaking down the developments...",
       "key_takeaways": [
-        "Takeaway 1 with specific metrics or details",
-        "Takeaway 2 with architectural implications",
-        "Takeaway 3 with trade-offs"
+        "Concrete takeaway 1 with metrics or specifics",
+        "Concrete takeaway 2 with implications",
+        "Concrete takeaway 3 with trade-offs"
       ],
       "signal_badge": "High Signal",
       "source_article_ids": ["id1", "id2"]
-    }},
-    {{
-      "headline": "Reasoning Models and Native Long-Context Frontiers",
-      "category": "AI Architecture",
-      "narrative_summary": "Narrative synthesis of recent AI research and releases...",
-      "key_takeaways": [
-        "Takeaway 1",
-        "Takeaway 2"
-      ],
-      "signal_badge": "Breakthrough",
-      "source_article_ids": ["id3"]
     }}
   ]
 }}
 """
 
     messages = [
-        {"role": "system", "content": "You are a senior tech editor. Output ONLY valid JSON."},
+        {"role": "system", "content": "You are a senior technical editor and domain journalist. Output ONLY valid JSON."},
         {"role": "user", "content": prompt}
     ]
 
@@ -92,55 +100,96 @@ Output MUST be a valid JSON object matching this exact schema:
         except Exception as e:
             logger.warning(f"Failed to parse Hermes JSON response: {e}")
 
-    # Fallback high-quality curated editorial dossier if Hermes VPS is not yet running
-    if not dossier_data or "story_clusters" not in dossier_data:
-        article_ids = [a['id'] for a in articles[:4]] if articles else ["art-1", "art-2", "art-3", "art-4"]
-        dossier_data = {
-            "title": f"The {edition_type.capitalize()} Intelligence Dossier",
-            "executive_tldr": [
-                "MicroVM isolation and page-table snapshotting enable sub-2ms cold starts across cloud edge runtimes.",
-                "128k context reasoning architectures demonstrate breakthrough efficiency with selective kv-cache compression.",
-                "WebGPU standardized shader compilation pipeline reaches consensus across major browser engines."
-            ],
-            "story_clusters": [
-                {
-                    "headline": "Next-Gen Virtualization: Ephemeral MicroVMs & Sub-Millisecond Cold Starts",
-                    "category": "Systems & Infrastructure",
-                    "narrative_summary": "Modern cloud infrastructure is undergoing a fundamental pivot away from long-lived container pools toward ephemeral, snapshot-based microVMs. Recent benchmarks demonstrate that by combining copy-on-write memory restoration with kernel bypass networking, cold-start latency drops by upwards of 70%, allowing serverless functions to behave with near-native invocation speed.",
-                    "key_takeaways": [
-                        "Memory footprint reduced by 64% using dirty-page snapshot diffing.",
-                        "Zero-copy page restoration eliminates hypervisor initialization bottlenecks.",
-                        "Direct socket handoff circumvents traditional Linux bridge latency."
-                    ],
-                    "signal_badge": "High Signal",
-                    "source_article_ids": article_ids[:2]
-                },
-                {
-                    "headline": "Reasoning Models and Context KV-Cache Optimization Frontiers",
-                    "category": "AI Architecture",
-                    "narrative_summary": "As foundation models push beyond 128k tokens of native context, attention compute and memory bandwidth become the dominating cost. Emerging research across open-weights architectures highlights speculative context pruning, where less critical key-value pairs are dynamically evicted during multi-step reasoning without degrading factual recall.",
-                    "key_takeaways": [
-                        "KV-cache memory overhead trimmed by 4x on multi-turn reasoning traces.",
-                        "Attention heads specialize into temporal anchors vs transient scratchpads.",
-                        "Open weights weights match proprietary reasoning throughput on commodity GPUs."
-                    ],
-                    "signal_badge": "Breakthrough",
-                    "source_article_ids": article_ids[2:4] if len(article_ids) > 2 else article_ids[:1]
-                }
+    # Fallback high-quality domain synthesis using the actual articles in the database
+    if not dossier_data or "story_clusters" not in dossier_data or not dossier_data.get("story_clusters"):
+        art_list = [dict(a) for a in articles]
+        
+        if art_list:
+            top_articles = art_list[:6]
+            exec_tldr = [
+                f"{top_articles[0]['publisher']}: {top_articles[0]['title']}",
+                f"{top_articles[1]['publisher']}: {top_articles[1]['title']}" if len(top_articles) > 1 else "Key developments across upstream channels.",
+                f"{top_articles[2]['publisher']}: {top_articles[2]['title']}" if len(top_articles) > 2 else "Ecosystem signals and architectural updates."
             ]
-        }
+
+            clusters = []
+            # Cluster 1
+            c1_arts = top_articles[:3]
+            c1_ids = [a["id"] for a in c1_arts]
+            c1_summary = f"Key developments from {c1_arts[0]['publisher']} and surrounding ecosystem outlets highlight major technical shifts in {selected_category}. Recent reporting indicates active progress on core mechanics, toolchains, and community governance."
+            c1_takeaways = [
+                f"{a['publisher']} reports on: {a['title'][:80]}"
+                for a in c1_arts
+            ]
+
+            clusters.append({
+                "headline": f"{selected_category}: Core Architecture & Updates",
+                "category": selected_category,
+                "narrative_summary": c1_summary,
+                "key_takeaways": c1_takeaways,
+                "signal_badge": "High Signal",
+                "source_article_ids": c1_ids
+            })
+
+            # Cluster 2 if more articles
+            if len(art_list) > 3:
+                c2_arts = art_list[3:6]
+                c2_ids = [a["id"] for a in c2_arts]
+                c2_summary = f"Complementary reports across {', '.join(set(a['publisher'] for a in c2_arts))} examine downstream integration, ecosystem benchmarks, and practical implementation patterns."
+                c2_takeaways = [
+                    f"{a['publisher']}: {a['title'][:80]}"
+                    for a in c2_arts
+                ]
+                clusters.append({
+                    "headline": f"{selected_category}: Ecosystem & Community Shifts",
+                    "category": selected_category,
+                    "narrative_summary": c2_summary,
+                    "key_takeaways": c2_takeaways,
+                    "signal_badge": "Ecosystem",
+                    "source_article_ids": c2_ids
+                })
+
+            dossier_data = {
+                "title": category_title,
+                "executive_tldr": exec_tldr,
+                "story_clusters": clusters
+            }
+        else:
+            dossier_data = {
+                "title": category_title,
+                "executive_tldr": [
+                    f"No recent articles ingested yet for {selected_category}.",
+                    "Follow feeds in the Discover page and click Ingest to populate this channel.",
+                    "Hermes will automatically synthesize incoming reports into this briefing."
+                ],
+                "story_clusters": [
+                    {
+                        "headline": f"{selected_category}: Ingestion Channel Initialized",
+                        "category": selected_category,
+                        "narrative_summary": f"This category channel has been created in Dossia. Feeds from {selected_category} publications are active in the reservoir.",
+                        "key_takeaways": [
+                            "Channel tracking active sources.",
+                            "Automated daily clustering ready.",
+                            "FTS5 full-text indexing enabled."
+                        ],
+                        "signal_badge": "Initialized",
+                        "source_article_ids": []
+                    }
+                ]
+            }
 
     dossier_id = f"dossier-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6]}"
     edition_date = datetime.utcnow().strftime("%B %d, %Y")
 
     cursor.execute("""
-    INSERT INTO dossiers (id, edition_date, edition_type, title, executive_tldr)
-    VALUES (?, ?, ?, ?, ?);
+    INSERT INTO dossiers (id, edition_date, edition_type, category, title, executive_tldr)
+    VALUES (?, ?, ?, ?, ?, ?);
     """, (
         dossier_id,
         edition_date,
         edition_type,
-        dossier_data.get("title", f"The {edition_type.capitalize()} Dossier"),
+        selected_category,
+        dossier_data.get("title", category_title),
         json.dumps(dossier_data.get("executive_tldr", []))
     ))
 
@@ -155,7 +204,7 @@ Output MUST be a valid JSON object matching this exact schema:
             cluster_id,
             dossier_id,
             cluster.get("headline", "Untitled Story"),
-            cluster.get("category", "General"),
+            cluster.get("category", selected_category),
             cluster.get("narrative_summary", ""),
             json.dumps(cluster.get("key_takeaways", [])),
             json.dumps(cluster.get("source_article_ids", [])),
@@ -170,6 +219,7 @@ Output MUST be a valid JSON object matching this exact schema:
         "id": dossier_id,
         "edition_date": edition_date,
         "edition_type": edition_type,
+        "category": selected_category,
         "title": dossier_data.get("title"),
         "executive_tldr": dossier_data.get("executive_tldr", []),
         "story_clusters": dossier_data.get("story_clusters", [])

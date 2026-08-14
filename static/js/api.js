@@ -2,13 +2,22 @@
  * Dossia Backend API Client
  */
 const API = {
-  async getLatestDossier() {
-    const res = await fetch('/api/dossiers/latest');
+  async getLatestDossier(category = 'all') {
+    let url = '/api/dossiers/latest';
+    if (category && category !== 'all') url += `?category=${encodeURIComponent(category)}`;
+    const res = await fetch(url);
     return res.json();
   },
 
-  async generateDossier(editionType = 'morning') {
-    const res = await fetch(`/api/dossiers/generate?edition_type=${editionType}`, { method: 'POST' });
+  async getDossierCategories() {
+    const res = await fetch('/api/dossiers/categories');
+    return res.json();
+  },
+
+  async generateDossier(editionType = 'morning', category = 'all') {
+    let url = `/api/dossiers/generate?edition_type=${editionType}`;
+    if (category && category !== 'all') url += `&category=${encodeURIComponent(category)}`;
+    const res = await fetch(url, { method: 'POST' });
     return res.json();
   },
 
