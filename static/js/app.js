@@ -165,8 +165,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     formatMarkdown(text) {
       if (!text) return '';
+      // Clean isolated brackets and markdown noise
+      let clean = text
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\(\/[^\)]+\)/g, '')
+        .replace(/\[[A-Za-z0-9\.\-_ /]{1,25}\]/g, '')
+        .replace(/^[#*+\->\s|]+/gm, '')
+        .trim();
+
       // Escape HTML
-      let html = text
+      let html = clean
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
@@ -175,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
       html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       // Inline code
       html = html.replace(/`([^`]+)`/g, '<code style="background: var(--bg-surface-elevated); padding: 2px 5px; border-radius: 4px; font-size: 0.88em; font-family: var(--font-mono);">$1</code>');
+      
       // Paragraph breaks
       const paras = html.split(/\n\s*\n/);
       if (paras.length > 1) {
