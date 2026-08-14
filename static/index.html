@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dossia — Autonomous News Intelligence & Podcasting 2.0</title>
+  <meta name="description" content="Autonomous News Intelligence, Editorial Dossiers & Podcasting 2.0 Engine powered by Hermes.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%22100%22><text y=%22.9em%22 font-size=%2290%22>🗞️</text></svg>">
+</head>
+<body>
+
+  <!-- =========================================================================
+       Top Header Masthead
+       ========================================================================= -->
+  <header class="masthead">
+    <div class="masthead-left">
+      <a href="#" class="brand-logo" id="brand-home-btn">
+        <span>🗞️</span>
+        <span>Dossia</span>
+        <span class="brand-badge">Hermes v3</span>
+      </a>
+      <nav class="nav-tabs" aria-label="Main Navigation">
+        <button class="nav-tab active" data-tab="dossier-view" id="nav-dossier-tab">
+          <span>📰</span> Daily Dossier
+        </button>
+        <button class="nav-tab" data-tab="reservoir-view" id="nav-reservoir-tab">
+          <span>📚</span> Reservoir
+        </button>
+        <button class="nav-tab" data-tab="podcast-view" id="nav-podcast-tab">
+          <span>🎙️</span> Podcast Studio
+        </button>
+        <button class="nav-tab" data-tab="settings-view" id="nav-settings-tab">
+          <span>⚙️</span> Settings
+        </button>
+      </nav>
+    </div>
+
+    <div class="masthead-right">
+      <button class="btn-search-trigger" id="open-search-btn" title="Search articles (Cmd+K)">
+        <span>🔍 Search articles...</span>
+        <span class="kbd-shortcut">⌘K</span>
+      </button>
+
+      <button class="icon-btn" id="trigger-sync-btn" title="Fetch feeds & sync news">
+        <span>⚡</span>
+      </button>
+
+      <button class="icon-btn" id="theme-toggle-btn" title="Toggle Theme (Paper / Obsidian)">
+        <span id="theme-icon">🌗</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       Main Application Views Container
+       ========================================================================= -->
+  <main class="app-container">
+
+    <!-- VIEW 1: The Daily Intelligence Dossier -->
+    <section class="tab-view active" id="dossier-view">
+      <div class="dossier-header">
+        <div>
+          <div class="dossier-meta-edition" id="dossier-edition-label">Morning Intelligence Edition</div>
+          <h1 class="dossier-title" id="dossier-title-text">The Morning Intelligence Dossier</h1>
+        </div>
+        <div class="dossier-actions">
+          <button class="btn-secondary" id="synth-new-dossier-btn">
+            <span>✨</span> Re-Synthesize with Hermes
+          </button>
+          <button class="btn-primary" id="listen-dossier-btn">
+            <span>🎧</span> Listen to Briefing
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive 60-Second Briefing Box -->
+      <div class="executive-brief-box">
+        <div class="executive-brief-heading">
+          <span class="brief-label">
+            <span>⚡</span> Executive 60-Second Briefing
+          </span>
+          <span class="signal-badge">Autonomous Synthesis</span>
+        </div>
+        <ul class="brief-bullets" id="dossier-bullets-list">
+          <li>Loading high-signal briefing highlights...</li>
+        </ul>
+      </div>
+
+      <!-- Story Capsules Grid -->
+      <div class="story-clusters-grid" id="story-clusters-container">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: Curated Reservoir Stream -->
+    <section class="tab-view" id="reservoir-view">
+      <div class="dossier-header">
+        <div>
+          <div class="dossier-meta-edition">Raw Knowledge Reservoir</div>
+          <h1 class="dossier-title">Ingested Technical Streams</h1>
+        </div>
+        <button class="btn-primary" id="reservoir-sync-btn">
+          <span>⚡</span> Ingest All Sources
+        </button>
+      </div>
+
+      <div class="reservoir-filter-bar">
+        <div class="category-filter-pills" id="category-filters-container">
+          <button class="filter-pill active" data-cat="all">All Channels</button>
+          <button class="filter-pill" data-cat="Engineering">Engineering</button>
+          <button class="filter-pill" data-cat="Systems & Cloud">Systems & Cloud</button>
+          <button class="filter-pill" data-cat="AI & Web">AI & Web</button>
+          <button class="filter-pill" data-cat="Research">Research</button>
+        </div>
+      </div>
+
+      <div class="articles-stream" id="articles-stream-container">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: Podcast Studio & Fountain Hub -->
+    <section class="tab-view" id="podcast-view">
+      <div class="dossier-header">
+        <div>
+          <div class="dossier-meta-edition">Podcasting 2.0 Feed</div>
+          <h1 class="dossier-title">Podcast Studio & Distribution</h1>
+        </div>
+        <button class="btn-primary" id="generate-episode-btn">
+          <span>🎙️</span> Synthesize New Episode
+        </button>
+      </div>
+
+      <div class="podcast-hero-box">
+        <div>
+          <h2 class="serif-heading" style="font-size: 1.5rem; margin-bottom: 8px;">Your Private Podcasting 2.0 RSS Feed</h2>
+          <p style="font-size: 0.92rem; margin-bottom: 16px;">
+            Subscribe to this private feed in <strong>Fountain</strong>, <strong>Pocket Casts</strong>, <strong>Apple Podcasts</strong>, or <strong>AntennaPod</strong>. 
+            Enjoy automated morning audio briefings with synchronized chapters and transcripts.
+          </p>
+
+          <label style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase;">
+            RSS Feed URL
+          </label>
+          <div class="podcast-feed-url-box">
+            <input type="text" class="feed-url-input" id="podcast-feed-url-input" readonly value="/podcast.xml">
+            <button class="btn-secondary" id="copy-feed-url-btn">
+              <span>📋</span> Copy URL
+            </button>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--accent-primary);" id="copy-feedback-msg"></p>
+        </div>
+
+        <div class="podcast-qr-card">
+          <div class="qr-code-placeholder" id="podcast-qr-box">
+            <!-- Rendered QR / Icon -->
+            <span style="font-size: 3.5rem;">🎙️</span>
+          </div>
+          <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted);">
+            Scan in Fountain App
+          </span>
+        </div>
+      </div>
+
+      <h3 class="serif-heading" style="font-size: 1.4rem; margin-bottom: 16px;">Episode Archive</h3>
+      <div class="episodes-list" id="episodes-archive-container">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 4: Settings & Hermes VPS -->
+    <section class="tab-view" id="settings-view">
+      <div class="dossier-header">
+        <div>
+          <div class="dossier-meta-edition">Configuration & Infrastructure</div>
+          <h1 class="dossier-title">Settings & Hermes Bridge</h1>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+        <div class="story-capsule">
+          <h3 class="serif-heading" style="font-size: 1.3rem; margin-bottom: 16px;">Hermes VPS Connection</h3>
+          <form id="settings-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">
+                Hermes API Base URL (OpenAI-compatible)
+              </label>
+              <input type="text" id="setting-hermes-url" class="qa-input" style="width: 100%;" placeholder="http://your-vps-ip:11434/v1">
+            </div>
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">
+                Hermes Model Identifier
+              </label>
+              <input type="text" id="setting-hermes-model" class="qa-input" style="width: 100%;" placeholder="hermes-3-llama-3.1-8b">
+            </div>
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">
+                API Key / Auth Token (Optional)
+              </label>
+              <input type="password" id="setting-hermes-key" class="qa-input" style="width: 100%;" placeholder="Bearer token">
+            </div>
+            <button type="submit" class="btn-primary" style="align-self: flex-start;">
+              <span>💾</span> Save Connection
+            </button>
+          </form>
+        </div>
+
+        <div class="story-capsule">
+          <h3 class="serif-heading" style="font-size: 1.3rem; margin-bottom: 16px;">Curated Ingestion Sources</h3>
+          <form id="add-source-form" style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <input type="text" id="new-source-name" class="qa-input" placeholder="Publication Name" required>
+            <input type="url" id="new-source-url" class="qa-input" placeholder="Feed URL" required>
+            <input type="text" id="new-source-cat" class="qa-input" placeholder="Category" value="Engineering" required>
+            <button type="submit" class="btn-secondary">Add</button>
+          </form>
+          <div id="sources-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
+            <!-- Rendered by app.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       Slide-Over Full-Text Reader Drawer
+       ========================================================================= -->
+  <div class="reader-overlay" id="reader-overlay"></div>
+  <aside class="reader-drawer" id="reader-drawer" aria-label="Article Reader">
+    <header class="reader-header">
+      <button class="icon-btn" id="reader-close-btn" title="Close reader (Esc)">✕</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-secondary" id="reader-listen-btn" title="Read aloud">
+          <span>🎧</span> Read to Me
+        </button>
+        <a href="#" target="_blank" class="btn-secondary" id="reader-source-link" title="Open original link">
+          <span>↗</span> Original
+        </a>
+      </div>
+    </header>
+    <div class="reader-body" id="reader-body-content">
+      <div class="reader-article-meta" id="reader-publisher-label">PUBLISHER</div>
+      <h2 class="reader-article-title serif-heading" id="reader-title-text">Article Title</h2>
+      <div class="reader-article-byline" id="reader-byline-text">By Author • 5 min read</div>
+      
+      <!-- AI TL;DR Box -->
+      <div class="reader-tldr-box">
+        <div class="reader-tldr-title">⚡ Hermes 3-Bullet Summary</div>
+        <div id="reader-tldr-content" style="font-size: 0.92rem; line-height: 1.5; color: var(--text-primary);">
+          Loading summary...
+        </div>
+      </div>
+
+      <!-- Clean Markdown Content -->
+      <div class="reader-content-markdown" id="reader-markdown-body">
+        Article content loading...
+      </div>
+
+      <!-- In-Margin Hermes Q&A -->
+      <div class="reader-hermes-qa-box">
+        <h4 class="serif-heading" style="font-size: 1.15rem; margin-bottom: 6px;">Ask Hermes About This Article</h4>
+        <p style="font-size: 0.84rem; color: var(--text-muted);">
+          Highlight concepts, ask for code clarifications, or inquire about technical trade-offs.
+        </p>
+        <div class="qa-input-wrapper">
+          <input type="text" class="qa-input" id="reader-qa-input" placeholder="e.g. What are the security trade-offs of this approach?">
+          <button class="btn-primary" id="reader-qa-send-btn">Ask</button>
+        </div>
+        <div id="reader-qa-response-box" style="margin-top: 12px; font-size: 0.9rem; line-height: 1.5; display: none;"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       Cmd+K Universal Search Modal
+       ========================================================================= -->
+  <div class="search-modal-overlay" id="search-modal-overlay">
+    <div class="search-dialog">
+      <div class="search-input-box">
+        <span>🔍</span>
+        <input type="text" class="search-modal-input" id="search-modal-input" placeholder="Search across all ingested full-text articles..." autofocus>
+        <span class="kbd-shortcut">ESC</span>
+      </div>
+      <div class="search-results-list" id="search-results-container">
+        <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+          Type keywords to search across articles and dossiers.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       Persistent Bottom Audio Player Dock
+       ========================================================================= -->
+  <div class="persistent-audio-dock" id="persistent-audio-dock">
+    <div class="audio-track-info">
+      <span style="font-size: 1.4rem;">🎙️</span>
+      <div style="overflow: hidden;">
+        <div class="audio-track-title" id="audio-player-title">Dossia Daily Intelligence</div>
+        <div class="audio-track-sub" id="audio-player-chapter">Executive Briefing</div>
+      </div>
+    </div>
+
+    <div class="audio-center-controls">
+      <div class="audio-button-row">
+        <button class="icon-btn" id="audio-prev-chapter-btn" title="Previous chapter" style="width: 28px; height: 28px;">⏮</button>
+        <button class="play-pause-btn" id="audio-play-pause-btn" title="Play / Pause">▶</button>
+        <button class="icon-btn" id="audio-next-chapter-btn" title="Next chapter" style="width: 28px; height: 28px;">⏭</button>
+      </div>
+      <div class="audio-scrubber-row">
+        <span class="audio-time-label" id="audio-current-time">0:00</span>
+        <input type="range" class="scrub-slider" id="audio-scrub-slider" min="0" max="100" value="0">
+        <span class="audio-time-label" id="audio-duration-time">3:30</span>
+      </div>
+    </div>
+
+    <div class="audio-right-controls">
+      <select id="audio-chapter-select" class="speed-toggle-btn" style="max-width: 140px;" title="Jump to chapter">
+        <option value="0">Chapters</option>
+      </select>
+      <button class="speed-toggle-btn" id="audio-speed-btn" title="Playback speed">1.0x</button>
+    </div>
+  </div>
+
+  <!-- Audio Element -->
+  <audio id="global-audio-element" preload="none"></audio>
+
+  <!-- JavaScript Modules -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/audio-player.js"></script>
+  <script src="/static/js/reader-drawer.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
