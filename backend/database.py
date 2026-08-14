@@ -213,7 +213,110 @@ CURATED_GAMING_CATALOG = [
     }
 ]
 
-CURATED_SOURCES_CATALOG = CURATED_LINUX_CATALOG + CURATED_GAMING_CATALOG
+CURATED_LABOR_CATALOG = [
+    {
+        "id": "jacobin",
+        "name": "Jacobin",
+        "site_url": "https://jacobin.com/",
+        "feed_url": "https://jacobin.com/feed",
+        "category": "Politics: Democratic Socialism",
+        "best_for": "Explicit democratic socialist political analysis, electoral commentary, and international history.",
+        "why_read": "Flagship publication of the modern American democratic socialist movement, providing daily political commentary, historical essays, and ideological critique.",
+        "enabled": 1
+    },
+    {
+        "id": "inthesetimes",
+        "name": "In These Times",
+        "site_url": "https://inthesetimes.com/",
+        "feed_url": "https://inthesetimes.com/rss",
+        "category": "Politics: Labor & Organizing",
+        "best_for": "Labor investigative reporting, workplace organizing, and grassroots social movements.",
+        "why_read": "Founded in 1976 by socialist historian James Weinstein, dedicated to advancing economic justice, union campaigns, and working-class struggles.",
+        "enabled": 1
+    },
+    {
+        "id": "dissent",
+        "name": "Dissent Magazine",
+        "site_url": "https://www.dissentmagazine.org/",
+        "feed_url": "https://www.dissentmagazine.org/feed/",
+        "category": "Politics: Theory & Criticism",
+        "best_for": "Long-form intellectual debate, democratic left theory, cultural criticism, and policy analysis.",
+        "why_read": "Founded in 1954 by Irving Howe, featuring rigorous long-form debates on political strategy, foreign policy, and democratic theory.",
+        "enabled": 1
+    },
+    {
+        "id": "labornotes",
+        "name": "Labor Notes",
+        "site_url": "https://labornotes.org/",
+        "feed_url": "https://labornotes.org/feed",
+        "category": "Politics: Rank & File Unions",
+        "best_for": "Rank-and-file union organizing, strike reporting, and workplace strategy.",
+        "why_read": "Media and organizing project since 1979 reporting directly from shop floors, union halls, and contract fights across the US.",
+        "enabled": 1
+    },
+    {
+        "id": "thelever",
+        "name": "The Lever",
+        "site_url": "https://www.levernews.com/",
+        "feed_url": "https://www.levernews.com/rss/",
+        "category": "Politics: Investigative Journalism",
+        "best_for": "Reader-supported investigative journalism on corporate lobbying, corruption, and money in politics.",
+        "why_read": "Founded by David Sirota, investigating corporate malfeasance, campaign finance corruption, and regulatory capture with zero corporate advertising.",
+        "enabled": 1
+    },
+    {
+        "id": "democraticleft",
+        "name": "Democratic Left (DSA)",
+        "site_url": "https://www.dsausa.org/democratic-left/",
+        "feed_url": "https://www.dsausa.org/feed/",
+        "category": "Politics: Movement Strategy",
+        "best_for": "Internal socialist strategy, local chapter organizing, and official movement analysis.",
+        "why_read": "The official publication of the Democratic Socialists of America (DSA), offering coverage of local organizing drives and labor solidarity efforts.",
+        "enabled": 1
+    },
+    {
+        "id": "therealnews",
+        "name": "The Real News Network (TRNN)",
+        "site_url": "https://therealnews.com/",
+        "feed_url": "https://therealnews.com/feed",
+        "category": "Politics: Video & Audio Journalism",
+        "best_for": "Video journalism, labor podcasts, racial and economic justice reporting.",
+        "why_read": "Baltimore-based non-profit newsroom focusing on frontline worker interviews, police accountability, and grassroots labor actions.",
+        "enabled": 1
+    },
+    {
+        "id": "currentaffairs",
+        "name": "Current Affairs",
+        "site_url": "https://www.currentaffairs.org/",
+        "feed_url": "https://currentaffairs.substack.com/feed",
+        "category": "Politics: Essays & Media Criticism",
+        "best_for": "Accessible political essays, media criticism, and witty socialist commentary.",
+        "why_read": "Pairs colorful, readable design with rigorous breakdowns of neoliberal rhetoric, right-wing talking points, and mainstream media framing.",
+        "enabled": 1
+    },
+    {
+        "id": "dollarsandsense",
+        "name": "Dollars & Sense",
+        "site_url": "https://www.dollarsandsense.org/",
+        "feed_url": "https://www.dollarsandsense.org/latest/rss/",
+        "category": "Politics: Socialist Economics",
+        "best_for": "Popular economic education and left analysis of fiscal/monetary policy.",
+        "why_read": "Edited by economists and journalists since 1974, demystifying inflation, banking policy, corporate taxes, and trade agreements.",
+        "enabled": 1
+    },
+    {
+        "id": "dropsitenews",
+        "name": "Drop Site News",
+        "site_url": "https://www.dropsitenews.com/",
+        "feed_url": "https://www.dropsitenews.com/feed",
+        "category": "Politics: Foreign Policy & Whistleblowing",
+        "best_for": "Investigative foreign policy, national security whistleblowing, and government transparency.",
+        "why_read": "Founded by Ryan Grim and Jeremy Scahill, dedicated to unfiltered investigative reporting on US empire, defense contractors, and diplomacy.",
+        "enabled": 1
+    }
+]
+
+CURATED_SOURCES_CATALOG = CURATED_LINUX_CATALOG + CURATED_GAMING_CATALOG + CURATED_LABOR_CATALOG
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(settings.db_path)
