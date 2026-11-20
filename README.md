@@ -86,11 +86,11 @@ dossia/
    ./run.sh
    ```
 
-   The dashboard will be available at `http://localhost:8000`.
+   The dashboard will be available at `http://127.0.0.1:8000`.
 
 ### Configuration
 
-Environment variables can be configured via environment or `.env` file:
+Configuration can be set with environment variables or in a local `.env` file. The `.env` file and persisted local settings are excluded from Git. By default, Dossia listens only on `127.0.0.1`; set `DOSSIA_HOST=0.0.0.0` only when you intentionally want other devices on your network to reach it.
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
@@ -98,6 +98,16 @@ Environment variables can be configured via environment or `.env` file:
 | `HERMES_API_KEY` | `""` | Optional Bearer token for LLM API authentication |
 | `HERMES_MODEL` | `hermes-3-llama-3.1-8b` | Model identifier passed to the LLM backend |
 | `TTS_API_URL` | `""` | Optional remote TTS endpoint (`/audio/speech`) |
+
+### Use GPT with your ChatGPT plan
+
+In Settings, select **ChatGPT Plan** and choose **Continue with ChatGPT**. Sign in in the browser and approve Dossia’s request to use eligible ChatGPT plan allowance. This open-source, locally run app uses OpenAI’s documented Sign in with ChatGPT OAuth/PKCE flow and the Responses API. Dossia stores OAuth credentials in a local, owner-only file under `data/`; credentials are not sent to the browser or committed to Git. You can disconnect the account from Dossia Settings, and review or limit usage in ChatGPT Settings → Usage.
+
+The ChatGPT plan flow is separate from **OpenAI API Key** mode. For API billing instead, enter an API key in Settings or set `OPENAI_API_KEY` in `.env`; when that key is present and `LLM_PROVIDER` is unset, API mode is selected by default. The default API model is `gpt-4o-mini`; set `OPENAI_MODEL` to change it.
+
+ChatGPT plan usage is subject to the eligibility, usage limits, and preview limitations for your account. OAuth authentication alone does not guarantee the plan-use permission; Dossia verifies that OpenAI granted the required scope before sending inference requests. The app sends these requests with response storage disabled and streaming enabled, as required by OpenAI’s local open-source flow.
+
+Other useful local settings: `DOSSIA_HOST` (default `127.0.0.1`), `DOSSIA_PORT` (default `8000`), and `DOSSIA_CORS_ORIGINS` (comma-separated browser origins allowed to call the API). Use `http://127.0.0.1:8000` for the local dashboard; Sign in with ChatGPT requires a loopback callback on `127.0.0.1`.
 
 ## API Endpoints
 

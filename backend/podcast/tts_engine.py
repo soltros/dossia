@@ -55,9 +55,4 @@ class TTSEngine:
         except Exception as e:
             logger.error(f"Built-in neural TTS synthesis error: {e}")
 
-        # 3. Fallback dummy audio container if all synthesis fails
-        if not output_path.exists():
-            with open(output_path, "wb") as f:
-                f.write(b'\xff\xfb\x90\x44\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' * 32)
-                
-        return f"/audio/{filename}"
+        raise RuntimeError("Speech synthesis failed. Check the TTS service or network connection and try again.")

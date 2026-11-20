@@ -64,7 +64,7 @@ class DossiaReaderDrawer {
       this.renderArticle(article);
     } catch (e) {
       this.titleEl.textContent = 'Failed to load article';
-      this.markdownBody.innerHTML = `<p style="color: var(--accent-primary);">Could not retrieve article content: ${e.message}</p>`;
+      this.markdownBody.textContent = `Could not retrieve article content: ${e.message}`;
     }
   }
 
@@ -108,7 +108,7 @@ class DossiaReaderDrawer {
         </div>
       `;
     } catch (e) {
-      this.qaResponseBox.innerHTML = `<span style="color: red;">Error: ${e.message}</span>`;
+      this.qaResponseBox.textContent = `Error: ${e.message}`;
     } finally {
       this.qaSendBtn.disabled = false;
       this.qaSendBtn.textContent = 'Ask';

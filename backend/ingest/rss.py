@@ -102,7 +102,8 @@ async def ingest_feed(source_id: str, feed_url: str, category: str, default_publ
                     8.5, # Default high signal score
                     json.dumps(tags[:5])
                 ))
-                new_articles_count += 1
+                if cursor.rowcount == 1:
+                    new_articles_count += 1
 
             cursor.execute("UPDATE sources SET last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?", (source_id,))
             conn.commit()

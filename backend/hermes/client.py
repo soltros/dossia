@@ -27,7 +27,9 @@ class LLMClient:
     ) -> str:
         provider = self.provider
 
-        if provider == "anthropic":
+        if provider == "chatgpt":
+            return await self._call_chatgpt(messages, json_mode)
+        elif provider == "anthropic":
             return await self._call_anthropic(messages, temperature, json_mode)
         elif provider == "openai":
             return await self._call_openai(messages, temperature, json_mode)
@@ -83,6 +85,60 @@ class LLMClient:
             logger.warning(f"OpenAI request failed: {e}")
 
         return ""
+
+    async def _call_chatgpt(self, messages: List[Dict[str, str]], json_mode: bool) -> str:
+        """Use the official ChatGPT-plan OAuth flow and Responses API for local OSS apps."""
+        from backend import chatgpt_auth
+
+        token = await chatgpt_auth.access_token()
+        models = await chatgpt_auth.available_models()
+        available_ids = {model["id"] for model in models}
+        model = settings.chatgpt_model or (models[0]["id"] if models else "")
+        if not model or model not in available_ids:
+            raise RuntimeError("Choose a model available to your ChatGPT account in Dossia Settings.")
+
+        payload: Dict[str, Any] = {
+            "model": model,
+            "input": messages,
+            "store": False,
+            "stream": True,
+            "max_output_tokens": 4000,
+        }
+        if json_mode:
+            payload["text"] = {"format": {"type": "json_object"}}
+
+        output = []
+        completed = False
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream(
+                "POST", "https://api.openai.com/v1/responses", json=payload,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            ) as response:
+                if response.is_error:
+                    logger.warning("ChatGPT Responses request failed with HTTP %s", response.status_code)
+                    raise RuntimeError(f"ChatGPT request failed (HTTP {response.status_code}). Check your connection and model selection.")
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    try:
+                        event = json.loads(line[5:].strip())
+                    except json.JSONDecodeError:
+                        continue
+                    event_type = event.get("type")
+                    if event_type == "response.output_text.delta":
+                        output.append(event.get("delta", ""))
+                    elif event_type == "response.failed":
+                        error = (event.get("response") or {}).get("error") or {}
+                        code = error.get("code") or error.get("type") or "request_failed"
+                        raise RuntimeError(f"ChatGPT request failed: {code}")
+                    elif event_type == "response.incomplete":
+                        raise RuntimeError("ChatGPT stopped before completing the response. Try a shorter request.")
+                    elif event_type == "response.completed":
+                        completed = True
+
+        if not completed:
+            raise RuntimeError("ChatGPT stream ended before the response completed. Please retry.")
+        return "".join(output)
 
     async def _call_anthropic(self, messages: List[Dict[str, str]], temperature: float, json_mode: bool) -> str:
         if not settings.anthropic_api_key:

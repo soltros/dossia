@@ -1,24 +1,34 @@
 import os
 import json
+import logging
+import tempfile
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env", override=False)
 DATA_DIR = BASE_DIR / "data"
 STATIC_DIR = BASE_DIR / "static"
 MEDIA_DIR = BASE_DIR / "storage" / "audio"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger("dossia.config")
+
+DATA_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    os.chmod(DATA_DIR, 0o700)
+except OSError:
+    logger.warning("Could not restrict permissions on %s", DATA_DIR)
 
 class Settings(BaseModel):
     app_name: str = "Dossia"
     db_path: str = str(DATA_DIR / "dossia.sqlite")
     
     # Active LLM Provider: 'hermes', 'openai', 'anthropic', 'openrouter', 'custom'
-    llm_provider: str = os.getenv("LLM_PROVIDER", "hermes")
+    llm_provider: str = os.getenv("LLM_PROVIDER", "openai" if os.getenv("OPENAI_API_KEY") else "hermes")
     
     # Hermes / Local / VPS (OpenAI-compatible)
     hermes_base_url: str = os.getenv("HERMES_BASE_URL", "http://localhost:11434/v1")
@@ -28,6 +38,7 @@ class Settings(BaseModel):
     # OpenAI API
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    chatgpt_model: str = os.getenv("CHATGPT_MODEL", "")
     
     # Anthropic Claude API
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
@@ -56,8 +67,8 @@ class Settings(BaseModel):
                     for k, v in data.items():
                         if hasattr(self, k) and v is not None:
                             setattr(self, k, v)
-            except Exception as e:
-                pass
+            except Exception:
+                logger.exception("Could not load persisted settings")
 
     def save_persisted(self):
         try:
@@ -68,6 +79,7 @@ class Settings(BaseModel):
                 "hermes_model": self.hermes_model,
                 "openai_api_key": self.openai_api_key,
                 "openai_model": self.openai_model,
+                "chatgpt_model": self.chatgpt_model,
                 "anthropic_api_key": self.anthropic_api_key,
                 "anthropic_model": self.anthropic_model,
                 "openrouter_api_key": self.openrouter_api_key,
@@ -77,10 +89,21 @@ class Settings(BaseModel):
                 "custom_model": self.custom_model,
                 "podcast_base_url": self.podcast_base_url
             }
-            with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
-        except Exception as e:
-            pass
+            fd, temp_path = tempfile.mkstemp(prefix="settings-", dir=str(DATA_DIR))
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.chmod(temp_path, 0o600)
+                os.replace(temp_path, SETTINGS_FILE)
+                os.chmod(SETTINGS_FILE, 0o600)
+            finally:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+        except Exception:
+            logger.exception("Could not persist settings")
+            raise
 
 settings = Settings()
 settings.load_persisted()

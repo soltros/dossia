@@ -1,5 +1,8 @@
 import time
-from fastapi import APIRouter
+import hashlib
+from urllib.parse import urlsplit
+import httpx
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from backend.database import get_db_connection
@@ -20,6 +23,7 @@ class SettingsUpdate(BaseModel):
     hermes_model: Optional[str] = None
     openai_api_key: Optional[str] = None
     openai_model: Optional[str] = None
+    chatgpt_model: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     anthropic_model: Optional[str] = None
     openrouter_api_key: Optional[str] = None
@@ -29,12 +33,13 @@ class SettingsUpdate(BaseModel):
     custom_model: Optional[str] = None
     podcast_base_url: Optional[str] = None
 
+class ProviderTestRequest(BaseModel):
+    provider: Optional[str] = None
+
+ALLOWED_PROVIDERS = {"hermes", "openai", "chatgpt", "anthropic", "openrouter", "custom"}
+
 def _mask_key(k: str) -> str:
-    if not k:
-        return ""
-    if len(k) <= 8:
-        return "********"
-    return f"{k[:4]}...{k[-4:]}"
+    return "Configured" if k else ""
 
 @router.get("")
 async def get_settings():
@@ -51,6 +56,7 @@ async def get_settings():
         "hermes_api_key_masked": _mask_key(settings.hermes_api_key),
         "openai_model": settings.openai_model,
         "openai_api_key_masked": _mask_key(settings.openai_api_key),
+        "chatgpt_model": settings.chatgpt_model,
         "anthropic_model": settings.anthropic_model,
         "anthropic_api_key_masked": _mask_key(settings.anthropic_api_key),
         "openrouter_model": settings.openrouter_model,
@@ -65,7 +71,10 @@ async def get_settings():
 @router.post("")
 async def update_settings(payload: SettingsUpdate):
     if payload.llm_provider is not None:
-        settings.llm_provider = payload.llm_provider
+        provider = payload.llm_provider.strip().lower()
+        if provider not in ALLOWED_PROVIDERS:
+            raise HTTPException(status_code=422, detail="Unsupported LLM provider")
+        settings.llm_provider = provider
     if payload.hermes_base_url is not None:
         settings.hermes_base_url = payload.hermes_base_url
     if payload.hermes_api_key is not None and payload.hermes_api_key != "":
@@ -77,6 +86,8 @@ async def update_settings(payload: SettingsUpdate):
         settings.openai_api_key = payload.openai_api_key
     if payload.openai_model is not None:
         settings.openai_model = payload.openai_model
+    if payload.chatgpt_model is not None:
+        settings.chatgpt_model = payload.chatgpt_model
 
     if payload.anthropic_api_key is not None and payload.anthropic_api_key != "":
         settings.anthropic_api_key = payload.anthropic_api_key
@@ -104,9 +115,12 @@ async def update_settings(payload: SettingsUpdate):
     return {"status": "success", "message": "Settings updated and persisted successfully"}
 
 @router.post("/test-llm")
-async def test_llm_connection(provider: Optional[str] = None):
+async def test_llm_connection(payload: ProviderTestRequest):
     """Health check test query against the configured or requested LLM provider."""
-    client = LLMClient(provider=provider or settings.llm_provider)
+    provider = (payload.provider or settings.llm_provider).strip().lower()
+    if provider not in ALLOWED_PROVIDERS:
+        raise HTTPException(status_code=422, detail="Unsupported LLM provider")
+    client = LLMClient(provider=provider)
     start_time = time.time()
     
     test_messages = [
@@ -114,7 +128,11 @@ async def test_llm_connection(provider: Optional[str] = None):
         {"role": "user", "content": "Respond with the single word: OK"}
     ]
     
-    resp = await client.generate_chat_completion(test_messages, temperature=0.1)
+    try:
+        resp = await client.generate_chat_completion(test_messages, temperature=0.1)
+    except (RuntimeError, httpx.HTTPError) as exc:
+        duration = round((time.time() - start_time) * 1000, 1)
+        return {"status": "offline_or_fallback", "provider": client.provider, "latency_ms": duration, "message": str(exc)}
     duration = round((time.time() - start_time) * 1000, 1)
     
     if resp and len(resp.strip()) > 0:
@@ -134,14 +152,38 @@ async def test_llm_connection(provider: Optional[str] = None):
 
 @router.post("/sources")
 async def add_source(source: SourceItem):
-    import hashlib
-    source_id = hashlib.sha256(source.feed_url.encode()).hexdigest()[:12]
+    name = source.name.strip()
+    feed_url = source.feed_url.strip()
+    category = source.category.strip()
+    parsed_url = urlsplit(feed_url)
+    if not name or not category or parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        raise HTTPException(status_code=422, detail="Provide a source name, category, and valid HTTP(S) feed URL")
+    source_id = hashlib.sha256(feed_url.encode()).hexdigest()[:12]
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-    INSERT OR REPLACE INTO sources (id, name, feed_url, category, enabled)
-    VALUES (?, ?, ?, ?, 1);
-    """, (source_id, source.name, source.feed_url, source.category))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute("""
+        INSERT INTO sources (id, name, feed_url, category, enabled)
+        VALUES (?, ?, ?, ?, 1)
+        ON CONFLICT(id) DO UPDATE SET name=excluded.name, feed_url=excluded.feed_url,
+          category=excluded.category, enabled=1;
+        """, (source_id, name, feed_url, category))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail="Could not add source; this feed URL may already be registered")
+    finally:
+        conn.close()
+    return {"status": "success", "source_id": source_id}
+
+@router.delete("/sources/{source_id}")
+async def delete_source(source_id: str):
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Source not found")
+        conn.commit()
+    finally:
+        conn.close()
     return {"status": "success", "source_id": source_id}

@@ -312,6 +312,8 @@ Output valid JSON matching this schema:
                 llm_dossier = parsed
                 logger.info(f"Successfully generated LLM briefing for {selected_category}")
     except Exception as e:
+        if client.provider == "chatgpt":
+            raise
         logger.warning(f"LLM briefing generation skipped or failed: {e}")
 
     # If LLM generation succeeded with rich story capsules, sanitize and use it

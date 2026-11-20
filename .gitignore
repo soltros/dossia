@@ -2,6 +2,9 @@
 .env
 .env.local
 *.env
+/data/settings.json
+/data/chatgpt_auth.json
+/data/chatgpt_host_id
 
 # Python
 __pycache__/

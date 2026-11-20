@@ -95,6 +95,9 @@ def init_db():
     END;
     """)
 
+    # Reconcile the search index if it was created after articles already existed.
+    cursor.execute("INSERT INTO articles_fts(articles_fts) VALUES ('rebuild');")
+
     # 4. Dossiers table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS dossiers (

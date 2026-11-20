@@ -8,10 +8,10 @@ router = APIRouter(prefix="/api/articles", tags=["articles"])
 
 @router.get("")
 async def list_articles(
-    category: Optional[str] = None,
-    q: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0
+    category: Optional[str] = Query(None, max_length=100),
+    q: Optional[str] = Query(None, max_length=200),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0)
 ):
     conn = get_db_connection()
     cursor = conn.cursor()

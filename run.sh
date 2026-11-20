@@ -10,6 +10,6 @@ if [ ! -d ".venv" ]; then
     .venv/bin/pip install -r requirements.txt
 fi
 
-echo "🗞️ Starting Dossia Server on http://localhost:8000 ..."
-echo "🎙️ Podcasting 2.0 RSS Feed live at http://localhost:8000/podcast.xml"
-exec .venv/bin/python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+echo "🗞️ Starting Dossia Server on http://127.0.0.1:${DOSSIA_PORT:-8000} ..."
+echo "🎙️ Podcasting 2.0 RSS Feed live at http://127.0.0.1:${DOSSIA_PORT:-8000}/podcast.xml"
+exec .venv/bin/python -m uvicorn backend.main:app --host "${DOSSIA_HOST:-127.0.0.1}" --port "${DOSSIA_PORT:-8000}" --reload

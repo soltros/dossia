@@ -3,6 +3,16 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
+  const safeWebUrl = value => {
+    try {
+      const url = new URL(value, window.location.origin);
+      return ['http:', 'https:'].includes(url.protocol) ? escapeHtml(url.href) : '#';
+    } catch (_) { return '#'; }
+  };
+
   const App = {
     currentTab: 'dossier-view',
     currentDossier: null,
@@ -276,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Render story clusters
         container.innerHTML = '';
         if (!dossier.story_clusters || dossier.story_clusters.length === 0) {
-          container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); grid-column: 1 / -1;">No story clusters yet for ${category}. Click "Re-Synthesize Briefing" to generate one.</div>`;
+          container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted); grid-column: 1 / -1;">No story clusters yet for ${escapeHtml(category)}. Click "Re-Synthesize Briefing" to generate one.</div>`;
           return;
         }
 
@@ -285,8 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
           card.className = 'story-capsule';
 
           const sourcesHtml = (cluster.sources || []).map(s => `
-            <button class="source-pill" data-article-id="${s.id}">
-              <span>📄</span> ${s.publisher || 'Source'}: ${s.title.substring(0, 36)}...
+            <button class="source-pill" data-article-id="${escapeHtml(s.id)}">
+              <span>📄</span> ${escapeHtml(s.publisher || 'Source')}: ${escapeHtml((s.title || '').substring(0, 36))}...
             </button>
           `).join('');
 
@@ -296,10 +306,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
           card.innerHTML = `
             <div class="capsule-top">
-              <span class="capsule-category">${cluster.category || category}</span>
-              <span class="signal-badge">${cluster.signal_badge || 'High Signal'}</span>
+              <span class="capsule-category">${escapeHtml(cluster.category || category)}</span>
+              <span class="signal-badge">${escapeHtml(cluster.signal_badge || 'High Signal')}</span>
             </div>
-            <h2 class="capsule-headline serif-heading">${cluster.headline}</h2>
+            <h2 class="capsule-headline serif-heading">${escapeHtml(cluster.headline)}</h2>
             <div class="capsule-narrative" style="color: var(--text-secondary); margin-bottom: 20px;">
               ${this.formatMarkdown(cluster.narrative_summary)}
             </div>
@@ -341,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
       } catch (e) {
-        bulletsList.innerHTML = `<li>Could not load briefing: ${e.message}</li>`;
+        bulletsList.innerHTML = `<li>Could not load briefing: ${escapeHtml(e.message)}</li>`;
       }
     },
 
@@ -415,24 +425,24 @@ document.addEventListener('DOMContentLoaded', () => {
           card.innerHTML = `
             <div>
               <div class="capsule-top" style="margin-bottom: 8px;">
-                <span class="capsule-category">${src.category}</span>
+                <span class="capsule-category">${escapeHtml(src.category)}</span>
                 <span class="signal-badge" style="background: ${isFollowed ? 'var(--accent-surface)' : 'var(--badge-bg)'}; color: ${isFollowed ? 'var(--accent-primary)' : 'var(--text-muted)'};">
                   ${isFollowed ? '🟢 Followed' : 'Inactive'}
                 </span>
               </div>
               <h3 class="serif-heading" style="font-size: 1.35rem; margin-bottom: 6px;">
-                <a href="${src.site_url || '#'}" target="_blank" title="Visit website" style="display: inline-flex; align-items: center; gap: 6px;">
-                  ${src.name} <span style="font-size: 0.8rem; color: var(--accent-primary);">↗</span>
+                <a href="${safeWebUrl(src.site_url)}" target="_blank" rel="noopener noreferrer" title="Visit website" style="display: inline-flex; align-items: center; gap: 6px;">
+                  ${escapeHtml(src.name)} <span style="font-size: 0.8rem; color: var(--accent-primary);">↗</span>
                 </a>
               </h3>
               <p style="font-size: 0.86rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
-                ${src.why_read || src.best_for || ''}
+                ${escapeHtml(src.why_read || src.best_for || '')}
               </p>
             </div>
 
             <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
               <span style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--text-muted);">
-                ${src.best_for ? '🎯 ' + src.best_for.substring(0, 36) + '...' : 'Curated feed'}
+                ${src.best_for ? '🎯 ' + escapeHtml(src.best_for.substring(0, 36)) + '...' : 'Curated feed'}
               </span>
               <button class="btn-${isFollowed ? 'secondary' : 'primary'} toggle-follow-btn" style="padding: 6px 14px; font-size: 0.8rem;">
                 ${isFollowed ? 'Unfollow' : 'Follow +'}
@@ -450,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
       } catch (e) {
-        container.innerHTML = `<div style="padding: 20px; color: red;">Failed to load catalog: ${e.message}</div>`;
+        container.innerHTML = `<div style="padding: 20px; color: red;">Failed to load catalog: ${escapeHtml(e.message)}</div>`;
       }
     },
 
@@ -526,14 +536,14 @@ document.addEventListener('DOMContentLoaded', () => {
           row.innerHTML = `
             <div class="article-row-main">
               <div class="article-row-meta">
-                <span>${art.publisher || 'FEED'}</span>
+                <span>${escapeHtml(art.publisher || 'FEED')}</span>
                 <span>•</span>
                 <span>${art.reading_time_minutes || 3} min read</span>
                 <span>•</span>
                 <span>${art.published_at ? art.published_at.substring(0, 10) : ''}</span>
               </div>
-              <h3 class="article-row-title">${art.title}</h3>
-              <p class="article-row-snippet">${art.summary || ''}</p>
+              <h3 class="article-row-title">${escapeHtml(art.title)}</h3>
+              <p class="article-row-snippet">${escapeHtml(art.summary || '')}</p>
             </div>
             <div class="article-row-side">
               <span class="signal-badge">${art.signal_score ? art.signal_score.toFixed(1) : '8.0'} Signal</span>
@@ -548,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
           container.appendChild(row);
         });
       } catch (e) {
-        container.innerHTML = `<div style="padding: 20px; color: red;">Error: ${e.message}</div>`;
+        container.innerHTML = `<div style="padding: 20px; color: red;">Error: ${escapeHtml(e.message)}</div>`;
       }
     },
 
@@ -607,8 +617,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--accent-primary); margin-bottom: 4px;">
                 EPISODE #${ep.episode_number} • ${Math.round(ep.duration_seconds / 60)} MINS • ${chaptersCount} CHAPTERS
               </div>
-              <h3 class="serif-heading" style="font-size: 1.25rem; margin-bottom: 6px;">${ep.title}</h3>
-              <p style="font-size: 0.88rem; color: var(--text-secondary);">${ep.description}</p>
+              <h3 class="serif-heading" style="font-size: 1.25rem; margin-bottom: 6px;">${escapeHtml(ep.title)}</h3>
+              <p style="font-size: 0.88rem; color: var(--text-secondary);">${escapeHtml(ep.description)}</p>
             </div>
             <div style="display: flex; gap: 8px;">
               <button class="btn-primary play-ep-btn">
@@ -629,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
           container.appendChild(card);
         });
       } catch (e) {
-        container.innerHTML = `<div style="padding: 20px; color: red;">Error: ${e.message}</div>`;
+        container.innerHTML = `<div style="padding: 20px; color: red;">Error: ${escapeHtml(e.message)}</div>`;
       }
     },
 
@@ -643,6 +653,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const providerSelect = document.getElementById('setting-llm-provider');
       providerSelect.addEventListener('change', () => {
         this.renderProviderFields(providerSelect.value);
+      });
+
+      window.addEventListener('message', event => {
+        if (event.source === this.chatgptAuthPopup && event.data?.type === 'dossia-chatgpt-auth') {
+          this.chatgptAuthPopup = null;
+          this.loadSettings();
+        }
       });
 
       document.getElementById('test-llm-btn').addEventListener('click', async () => {
@@ -659,22 +676,17 @@ document.addEventListener('DOMContentLoaded', () => {
           // First save current form fields so test uses the latest inputs
           await this.saveCurrentSettingsForm(false);
 
-          const res = await fetch('/api/settings/test-llm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider })
-          });
-          const result = await res.json();
+          const result = await API.testLLM(provider);
 
           if (result.status === 'connected') {
-            statusBox.innerHTML = `🟢 <strong>Connected</strong> to ${result.provider} (${result.latency_ms}ms) — Response: "${result.response}"`;
+            statusBox.innerHTML = `🟢 <strong>Connected</strong> to ${escapeHtml(result.provider)} (${escapeHtml(result.latency_ms)}ms) — Response: "${escapeHtml(result.response)}"`;
             statusBox.style.color = 'var(--accent-primary)';
           } else {
-            statusBox.innerHTML = `🟡 <strong>Fallback Active</strong>: ${result.message} (${result.latency_ms}ms)`;
+            statusBox.innerHTML = `🟡 <strong>Fallback Active</strong>: ${escapeHtml(result.message)} (${escapeHtml(result.latency_ms)}ms)`;
             statusBox.style.color = '#e6a23c';
           }
         } catch (e) {
-          statusBox.innerHTML = `🔴 <strong>Error</strong>: ${e.message}`;
+          statusBox.innerHTML = `🔴 <strong>Error</strong>: ${escapeHtml(e.message)}`;
           statusBox.style.color = 'red';
         } finally {
           testBtn.disabled = false;
@@ -707,48 +719,89 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = `
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">OpenAI API Key</label>
-            <input type="password" id="setting-openai-key" class="qa-input" style="width: 100%;" placeholder="${s.openai_api_key_masked || 'sk-...'}">
+            <input type="password" id="setting-openai-key" class="qa-input" style="width: 100%;" placeholder="${escapeHtml(s.openai_api_key_masked || 'sk-...')}">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
-            <input type="text" id="setting-openai-model" class="qa-input" style="width: 100%;" value="${s.openai_model || 'gpt-4o-mini'}" placeholder="gpt-4o, gpt-4o-mini, o3-mini">
+            <input type="text" id="setting-openai-model" class="qa-input" style="width: 100%;" value="${escapeHtml(s.openai_model || 'gpt-4o-mini')}" placeholder="gpt-4o, gpt-4o-mini, o3-mini">
           </div>
         `;
+      } else if (provider === 'chatgpt') {
+        container.innerHTML = `
+          <div style="padding: 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
+            <div id="chatgpt-connection-status" style="margin-bottom: 12px; color: var(--text-muted);">Checking ChatGPT connection…</div>
+            <button type="button" id="chatgpt-connect-btn" class="btn-primary">Continue with ChatGPT</button>
+            <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer" style="margin-left: 12px;">Manage plan usage ↗</a>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin: 12px 0 0;">Dossia will ask permission to use eligible ChatGPT plan usage. Credentials stay on this computer; they are never sent to the browser or committed to Git.</p>
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">ChatGPT Model (optional)</label>
+            <input type="text" id="setting-chatgpt-model" class="qa-input" style="width: 100%;" value="${escapeHtml(s.chatgpt_model || '')}" placeholder="Leave blank to use the first model available to your account">
+          </div>
+        `;
+        document.getElementById('chatgpt-connect-btn').addEventListener('click', async event => {
+          const button = event.currentTarget;
+          if (button.dataset.connected === 'true') {
+            button.disabled = true;
+            try {
+              await API.disconnectChatGPT();
+              await this.refreshChatGPTStatus();
+            } catch (error) {
+              alert(`Could not disconnect ChatGPT: ${error.message}`);
+            } finally {
+              button.disabled = false;
+            }
+            return;
+          }
+          const popup = window.open('/api/chatgpt-auth/start', 'dossia-chatgpt-auth', 'popup,width=620,height=760');
+          try {
+            await API.saveSettings({
+              llm_provider: 'chatgpt',
+              chatgpt_model: document.getElementById('setting-chatgpt-model')?.value.trim() || ''
+            });
+            if (popup) this.chatgptAuthPopup = popup;
+            else window.location.href = '/api/chatgpt-auth/start';
+          } catch (error) {
+            popup?.close();
+            alert(`Could not save ChatGPT settings: ${error.message}`);
+          }
+        });
+        this.refreshChatGPTStatus();
       } else if (provider === 'anthropic') {
         container.innerHTML = `
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Anthropic Claude API Key</label>
-            <input type="password" id="setting-anthropic-key" class="qa-input" style="width: 100%;" placeholder="${s.anthropic_api_key_masked || 'sk-ant-...'}">
+            <input type="password" id="setting-anthropic-key" class="qa-input" style="width: 100%;" placeholder="${escapeHtml(s.anthropic_api_key_masked || 'sk-ant-...')}">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
-            <input type="text" id="setting-anthropic-model" class="qa-input" style="width: 100%;" value="${s.anthropic_model || 'claude-3-5-sonnet-20241022'}" placeholder="claude-3-7-sonnet-20250219, claude-3-5-haiku-20241022">
+            <input type="text" id="setting-anthropic-model" class="qa-input" style="width: 100%;" value="${escapeHtml(s.anthropic_model || 'claude-3-5-sonnet-20241022')}" placeholder="claude-3-7-sonnet-20250219, claude-3-5-haiku-20241022">
           </div>
         `;
       } else if (provider === 'openrouter') {
         container.innerHTML = `
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">OpenRouter API Key</label>
-            <input type="password" id="setting-openrouter-key" class="qa-input" style="width: 100%;" placeholder="${s.openrouter_api_key_masked || 'sk-or-...'}">
+            <input type="password" id="setting-openrouter-key" class="qa-input" style="width: 100%;" placeholder="${escapeHtml(s.openrouter_api_key_masked || 'sk-or-...')}">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
-            <input type="text" id="setting-openrouter-model" class="qa-input" style="width: 100%;" value="${s.openrouter_model || 'deepseek/deepseek-r1'}" placeholder="deepseek/deepseek-r1, meta-llama/llama-3.3-70b-instruct">
+            <input type="text" id="setting-openrouter-model" class="qa-input" style="width: 100%;" value="${escapeHtml(s.openrouter_model || 'deepseek/deepseek-r1')}" placeholder="deepseek/deepseek-r1, meta-llama/llama-3.3-70b-instruct">
           </div>
         `;
       } else if (provider === 'custom') {
         container.innerHTML = `
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Custom API Base URL</label>
-            <input type="text" id="setting-custom-url" class="qa-input" style="width: 100%;" value="${s.custom_base_url || 'http://localhost:8080/v1'}" placeholder="http://localhost:8080/v1">
+            <input type="text" id="setting-custom-url" class="qa-input" style="width: 100%;" value="${escapeHtml(s.custom_base_url || 'http://localhost:8080/v1')}" placeholder="http://localhost:8080/v1">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Model Identifier</label>
-            <input type="text" id="setting-custom-model" class="qa-input" style="width: 100%;" value="${s.custom_model || 'default'}" placeholder="model name">
+            <input type="text" id="setting-custom-model" class="qa-input" style="width: 100%;" value="${escapeHtml(s.custom_model || 'default')}" placeholder="model name">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional)</label>
-            <input type="password" id="setting-custom-key" class="qa-input" style="width: 100%;" placeholder="${s.custom_api_key_masked || 'Bearer token'}">
+            <input type="password" id="setting-custom-key" class="qa-input" style="width: 100%;" placeholder="${escapeHtml(s.custom_api_key_masked || 'Bearer token')}">
           </div>
         `;
       } else {
@@ -756,15 +809,15 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = `
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Hermes / VPS API Base URL</label>
-            <input type="text" id="setting-hermes-url" class="qa-input" style="width: 100%;" value="${s.hermes_base_url || 'http://localhost:11434/v1'}" placeholder="http://your-vps-ip:11434/v1">
+            <input type="text" id="setting-hermes-url" class="qa-input" style="width: 100%;" value="${escapeHtml(s.hermes_base_url || 'http://localhost:11434/v1')}" placeholder="http://your-vps-ip:11434/v1">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">Hermes Model Identifier</label>
-            <input type="text" id="setting-hermes-model" class="qa-input" style="width: 100%;" value="${s.hermes_model || 'hermes-3-llama-3.1-8b'}" placeholder="hermes-3-llama-3.1-8b">
+            <input type="text" id="setting-hermes-model" class="qa-input" style="width: 100%;" value="${escapeHtml(s.hermes_model || 'hermes-3-llama-3.1-8b')}" placeholder="hermes-3-llama-3.1-8b">
           </div>
           <div>
             <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional)</label>
-            <input type="password" id="setting-hermes-key" class="qa-input" style="width: 100%;" placeholder="${s.hermes_api_key_masked || 'Bearer token'}">
+            <input type="password" id="setting-hermes-key" class="qa-input" style="width: 100%;" placeholder="${escapeHtml(s.hermes_api_key_masked || 'Bearer token')}">
           </div>
         `;
       }
@@ -779,6 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const model = document.getElementById('setting-openai-model')?.value;
         if (key) payload.openai_api_key = key;
         if (model) payload.openai_model = model;
+      } else if (provider === 'chatgpt') {
+        payload.chatgpt_model = document.getElementById('setting-chatgpt-model')?.value.trim() || '';
       } else if (provider === 'anthropic') {
         const key = document.getElementById('setting-anthropic-key')?.value;
         const model = document.getElementById('setting-anthropic-model')?.value;
@@ -810,6 +865,22 @@ document.addEventListener('DOMContentLoaded', () => {
       await this.loadSettings();
     },
 
+    async refreshChatGPTStatus() {
+      const statusEl = document.getElementById('chatgpt-connection-status');
+      const button = document.getElementById('chatgpt-connect-btn');
+      if (!statusEl || !button) return;
+      try {
+        const status = await API.getChatGPTStatus();
+        button.dataset.connected = status.connected ? 'true' : 'false';
+        button.textContent = status.connected ? 'Disconnect ChatGPT' : 'Continue with ChatGPT';
+        statusEl.textContent = status.connected
+          ? `Connected${status.email ? ` as ${status.email}` : ''}. ${status.plan_usage_enabled ? 'ChatGPT plan usage is enabled.' : 'Plan usage permission is missing; reconnect to grant it.'}`
+          : 'Not connected. Sign in to use eligible ChatGPT plan usage.';
+      } catch (error) {
+        statusEl.textContent = `Could not load ChatGPT connection: ${error.message}`;
+      }
+    },
+
     async loadSettings() {
       try {
         const data = await API.getSettings();
@@ -828,8 +899,8 @@ document.addEventListener('DOMContentLoaded', () => {
           item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-surface-elevated); border-radius: var(--radius-md); font-size: 0.85rem;';
           item.innerHTML = `
             <div>
-              <strong>${src.name}</strong> <span style="color: var(--text-muted);">(${src.category})</span>
-              <div style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--text-muted);">${src.feed_url}</div>
+              <strong>${escapeHtml(src.name)}</strong> <span style="color: var(--text-muted);">(${escapeHtml(src.category)})</span>
+              <div style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--text-muted);">${escapeHtml(src.feed_url)}</div>
             </div>
             <button class="icon-btn delete-src-btn" style="width: 24px; height: 24px;" title="Delete">✕</button>
           `;
@@ -895,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             const res = await API.getArticles('all', q, 15);
             if (!res.articles || res.articles.length === 0) {
-              resultsContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted);">No results matching "${q}".</div>`;
+              resultsContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted);">No results matching "${escapeHtml(q)}".</div>`;
               return;
             }
 
@@ -904,9 +975,9 @@ document.addEventListener('DOMContentLoaded', () => {
               const item = document.createElement('div');
               item.className = 'search-result-item';
               item.innerHTML = `
-                <div style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--accent-primary);">${art.publisher || 'FEED'}</div>
-                <div style="font-size: 0.95rem; font-weight: 600;">${art.title}</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">${art.summary ? art.summary.substring(0, 100) + '...' : ''}</div>
+                <div style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--accent-primary);">${escapeHtml(art.publisher || 'FEED')}</div>
+                <div style="font-size: 0.95rem; font-weight: 600;">${escapeHtml(art.title)}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${art.summary ? escapeHtml(art.summary.substring(0, 100)) + '...' : ''}</div>
               `;
               item.addEventListener('click', () => {
                 closeSearch();
@@ -915,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
               resultsContainer.appendChild(item);
             });
           } catch (e) {
-            resultsContainer.innerHTML = `<div style="padding: 16px; color: red;">Search error: ${e.message}</div>`;
+            resultsContainer.innerHTML = `<div style="padding: 16px; color: red;">Search error: ${escapeHtml(e.message)}</div>`;
           }
         }, 200);
       });
